@@ -107,6 +107,7 @@ create table if not exists public.participants (
   level_seen   int not null default 0,
   created_at   timestamptz not null default now()
 );
+alter table public.participants add column if not exists avatar text;      -- 캐릭터 '도형-색' (예: 3-5)
 create unique index if not exists participants_name_norm_key on public.participants (public._norm(name));
 
 create table if not exists public.seasons (
@@ -429,6 +430,15 @@ begin
   return json_build_object('token', _new_session(r.id), 'id', r.id, 'name', r.name);
 end $$;
 
+create or replace function public.set_avatar(p_token text, p_avatar text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me participants;
+begin
+  me := _auth(p_token);
+  if coalesce(p_avatar, '') !~ '^[0-8]-[0-8]$' then raise exception '캐릭터를 다시 골라 주세요.'; end if;
+  update participants set avatar = p_avatar where id = me.id;
+end $$;
+
 create or replace function public.logout(p_token text) returns void
 language sql security definer set search_path = public, extensions as $$
   delete from sessions where token = p_token
@@ -524,7 +534,7 @@ begin
   if s.id is not null then
     v_season := json_build_object('id', s.id, 'number', s.number, 'starts_on', s.starts_on,
                                   'ends_on', s.ends_on, 'weekly_deposit', s.weekly_deposit);
-    select coalesce(json_agg(json_build_object('id', p.id, 'name', p.name, 'eid', e.id, 'types', e.goal_types,
+    select coalesce(json_agg(json_build_object('id', p.id, 'name', p.name, 'avatar', p.avatar, 'eid', e.id, 'types', e.goal_types,
              'goal', e.weekly_goal, 'channel', e.main_channel_url,
              'total', (select count(*) from posts po where po.participant_id = p.id),
              'rally', r.cur, 'best', r.best) order by p.name), '[]'::json) into v_people
@@ -554,7 +564,7 @@ begin
   end if;
 
   if has_me then
-    v_me := json_build_object('id', me.id, 'name', me.name, 'is_admin', me.is_admin,
+    v_me := json_build_object('id', me.id, 'name', me.name, 'avatar', me.avatar, 'is_admin', me.is_admin,
       'enrolled', s.id is not null and exists (select 1 from enrollments where participant_id = me.id and season_id = s.id),
       'prev', (select json_build_object('types', e.goal_types, 'goal', e.weekly_goal, 'channel', e.main_channel_url)
                from enrollments e join seasons se on se.id = e.season_id
@@ -597,7 +607,7 @@ begin
   from enrollments e join seasons se on se.id = e.season_id
   where e.participant_id = p.id;
 
-  return json_build_object('id', p.id, 'name', p.name,
+  return json_build_object('id', p.id, 'name', p.name, 'avatar', p.avatar,
     'total', (select count(*) from posts where participant_id = p.id),
     'cheers', (select count(*) from cheers c join posts po on po.id = c.post_id where po.participant_id = p.id),
     'rally', rc, 'best', rb, 'posts', v_posts, 'seasons', v_seasons);
@@ -612,7 +622,7 @@ begin
   if p_season_id is null then s := _current_season(); else select * into s from seasons where id = p_season_id; end if;
   select coalesce(json_agg(json_build_object('id', id, 'number', number, 'starts_on', starts_on, 'ends_on', ends_on)
          order by number), '[]'::json) into v_seasons from seasons;
-  select coalesce(json_agg(json_build_object('id', p.id, 'name', p.name, 'is_admin', p.is_admin,
+  select coalesce(json_agg(json_build_object('id', p.id, 'name', p.name, 'avatar', p.avatar, 'is_admin', p.is_admin,
            'has_pin', p.pin_hash is not null,
            'e', (select json_build_object('id', e.id, 'types', e.goal_types, 'goal', e.weekly_goal, 'channel', e.main_channel_url)
                  from enrollments e where e.participant_id = p.id and e.season_id = s.id)) order by p.name), '[]'::json)
@@ -754,7 +764,7 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and (p.proname like '\_%' or p.proname like 'admin\_%'
-           or p.proname in ('name_status','register','login','logout','enroll','add_post','update_post',
+           or p.proname in ('name_status','register','login','logout','set_avatar','enroll','add_post','update_post',
                             'delete_post','toggle_cheer','get_state','get_profile'))
   loop
     if f.proname like '\_%' then

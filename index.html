@@ -145,6 +145,66 @@
   .overlay h2{font-size:20px;font-weight:800}
   .overlay p{font-size:14px;color:var(--muted);margin-top:6px}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+  /* ── 캐릭터 · 컬러 테마 ── */
+  :root{ --bg:#FAF6EF; --ink:#27221F; --muted:#857B73;
+    --c0:#FF7A59; --c1:#FFA630; --c2:#FFD23F; --c3:#5CC98B; --c4:#3EC6C0; --c5:#6CA8FF; --c6:#A88BFF; --c7:#FF8FC2; --c8:#D9B48F; }
+  .av{display:block;flex:none;width:44px;height:44px}
+  .title{font-size:28px}
+  .track i{background:var(--ink)}
+  .panel{border-radius:22px}
+  .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+  .ok{background:var(--c3);color:var(--ink)}
+  .hero{display:flex;justify-content:center;margin:-2px 0 14px}
+  .hero .av{width:64px;height:64px;margin:0 -7px}
+  .hero .av:nth-child(odd){transform:translateY(8px) rotate(-6deg)}
+  .hero .av:nth-child(even){transform:rotate(7deg)}
+  .hi{display:flex;align-items:center;gap:10px;min-width:0}
+  .hi .av{width:40px;height:40px}
+  .stat{border:0;border-radius:22px}
+  .stat small{color:rgba(39,34,31,.72)}
+  .stat.s0{background:var(--c2)} .stat.s1{background:var(--c7)} .stat.s2{background:var(--c4)} .stat.s3{background:var(--c6)}
+  .banner{background:var(--c3);color:var(--ink);border-radius:22px}
+  .tab{border-radius:99px}
+  .prow{position:relative;overflow:hidden;border:0;border-radius:22px;padding:16px 104px 16px 18px;min-height:112px}
+  .prow.me{border:0;box-shadow:0 0 0 3px var(--ink)}
+  .prow .av{position:absolute;right:-8px;bottom:-18px;width:112px;height:112px}
+  .prow .r1 b{font-size:18px;font-weight:800}
+  .prow .r2{color:rgba(39,34,31,.72)}
+  .prow .tag,.prow .tag.rally,.prow .tag.t,.prow .tag.soft{background:rgba(255,255,255,.6);color:var(--ink);border:0}
+  .prow .tag.mine{background:var(--ink);color:#fff}
+  .prow .tag.rally.hot{background:var(--ink);color:#fff}
+  .prow .cnt{display:block;margin:6px 0 0;font-size:22px;font-weight:800;letter-spacing:-.02em}
+  .prow .segs{margin-top:6px}
+  .segs i{background:rgba(255,255,255,.6)}
+  .segs i.on,.segs.done i.on{background:var(--ink)}
+  .fitem .av{width:40px;height:40px}
+  .cheer[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+  .pcard{position:relative;overflow:hidden;border-radius:22px;padding:20px 18px 18px;margin-bottom:12px;min-height:150px}
+  .pcard .av{position:absolute;right:-14px;bottom:-22px;width:150px;height:150px}
+  .pcard h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+  .pcard p{font-size:13px;color:rgba(39,34,31,.75);max-width:62%}
+  .pcard .tag{display:inline-block;background:var(--ink);color:#fff;font-size:12px;padding:3px 10px;margin-bottom:6px}
+  .pcard .link{color:var(--ink);display:inline-block;margin-top:6px}
+  .tiles{display:flex;gap:5px}
+  .tiles .av{width:34px;height:34px}
+  .tiles i{width:34px;height:34px;border-radius:10px;border:1.5px dashed var(--line)}
+  .strip{gap:12px}
+  .pick .pv{display:grid;place-items:center;padding:6px 0 12px}
+  .pick .pv .av{width:112px;height:112px}
+  .pick .shapes{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}
+  .pick .shapes button{padding:3px;border-radius:12px;border:2px solid transparent}
+  .pick .shapes button[aria-pressed="true"]{border-color:var(--ink)}
+  .pick .shapes .av{width:100%;height:auto}
+  .pick .cols{display:grid;grid-template-columns:repeat(9,1fr);gap:6px;margin-top:10px}
+  .pick .cols button{aspect-ratio:1;border-radius:50%;border:3px solid transparent}
+  .pick .cols button[aria-pressed="true"]{border-color:var(--ink)}
+  .overlay{padding:0}
+  .overlay .box{background:none;max-width:none;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;border-radius:0}
+  .overlay .av{width:220px;height:220px;margin:0 0 8px}
+  .overlay h2{font-size:34px;font-weight:800;letter-spacing:-.03em}
+  .overlay p{color:var(--ink);font-size:15px;max-width:280px}
+  .overlay .btn{max-width:320px;margin-top:26px}
 </style>
 </head>
 <body>
@@ -167,6 +227,50 @@ var TYPES = { instagram_reels:'인스타 릴스', instagram_post:'인스타 게�
 var TYPE_KEYS = Object.keys(TYPES);
 var LEVELS = [ {n:'Starter',at:0}, {n:'First Tuk',at:1}, {n:'Warm-up',at:10}, {n:'Publisher',at:20}, {n:'Builder',at:60}, {n:'Creator',at:120} ];
 var DEMO_MSG = '데모 모드에서는 저장되지 않아요. config.js에 키를 넣으면 실제로 동작해요.';
+
+/* 캐릭터: '도형-색' (예: '3-5'). 표정은 진행 상태에 따라 바뀐다 */
+var COLORS = ['#FF7A59','#FFA630','#FFD23F','#5CC98B','#3EC6C0','#6CA8FF','#A88BFF','#FF8FC2','#D9B48F'];
+var COLOR_NAMES = ['코랄','오렌지','옐로','그린','민트','블루','퍼플','핑크','샌드'];
+var SHAPES = [
+  ['<circle cx="50" cy="50" r="42"/>', 50],
+  ['<rect x="12" y="12" width="76" height="76" rx="16"/>', 50],
+  ['<path d="M50 14 90 84H10Z"/>', 64],
+  ['<path d="M50 10 90 40 75 88H25L10 40Z"/>', 54],
+  ['<circle cx="33" cy="58" r="23"/><circle cx="64" cy="60" r="25"/><circle cx="50" cy="36" r="23"/><rect x="33" y="58" width="31" height="23"/>', 56],
+  ['<path d="M10 88V50a40 40 0 0 1 80 0v38Z"/>', 52],
+  ['<path d="M50 8 92 50 50 92 8 50Z"/>', 50],
+  ['<circle cx="50" cy="30" r="22"/><circle cx="70" cy="50" r="22"/><circle cx="50" cy="70" r="22"/><circle cx="30" cy="50" r="22"/>', 50],
+  ['<path d="M50 8 88 29V71L50 92 12 71V29Z"/>', 50]
+];
+function defAv(id){ var h = 0, t = String(id || ''); for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return (h % 9) + '-' + (Math.floor(h / 9) % 9); }
+function avOf(p){ return p && /^[0-8]-[0-8]$/.test(p.avatar || '') ? p.avatar : defAv(p && p.id); }
+function colorOf(p){ return COLORS[Number(avOf(p).split('-')[1])]; }
+function tintOf(p){ var c = colorOf(p), o = '#';                       // 색 카드 위에서는 캐릭터를 밝은 톤으로
+  for (var i = 1; i < 7; i += 2){ var v = parseInt(c.substr(i, 2), 16); o += ('0' + Math.round(v + (255 - v) * 0.6).toString(16)).slice(-2); } return o; }
+function avatar(av, mood, fill){
+  var a = String(av || '0-0').split('-'), sh = SHAPES[Number(a[0])] || SHAPES[0], col = fill || COLORS[Number(a[1])] || COLORS[0];
+  var y = sh[1], ey = y - 4, my = y + 11, ink = '#27221F', f = '';
+  var line = ' fill="none" stroke="' + ink + '" stroke-width="3.2" stroke-linecap="round"';
+  if (mood === 'sleepy'){
+    f = '<path d="M31 ' + ey + 'Q37 ' + (ey + 5) + ' 43 ' + ey + 'M57 ' + ey + 'Q63 ' + (ey + 5) + ' 69 ' + ey + 'M46 ' + (my + 1) + 'h8"' + line + '/>' +
+        '<text x="74" y="' + (y - 20) + '" font-size="13" font-weight="800" fill="' + ink + '" opacity=".55">z</text>';
+  } else if (mood === 'happy'){
+    f = '<path d="M31 ' + (ey + 2) + 'Q37 ' + (ey - 6) + ' 43 ' + (ey + 2) + 'M57 ' + (ey + 2) + 'Q63 ' + (ey - 6) + ' 69 ' + (ey + 2) + '"' + line + '/>' +
+        '<path d="M41 ' + (my - 2) + 'Q50 ' + (my + 12) + ' 59 ' + (my - 2) + 'Z" fill="' + ink + '" stroke="' + ink + '" stroke-width="2.4" stroke-linejoin="round"/>';
+  } else {
+    f = '<circle cx="37" cy="' + ey + '" r="8" fill="#fff"/><circle cx="63" cy="' + ey + '" r="8" fill="#fff"/>' +
+        '<circle cx="38.5" cy="' + (ey + 1) + '" r="3.8" fill="' + ink + '"/><circle cx="64.5" cy="' + (ey + 1) + '" r="3.8" fill="' + ink + '"/>' +
+        '<path d="M44 ' + my + 'Q50 ' + (my + 5) + ' 56 ' + my + '"' + line + '/>';
+  }
+  return '<svg class="av" viewBox="0 0 100 100" aria-hidden="true"><g fill="' + col + '" stroke="' + col + '" stroke-width="8" stroke-linejoin="round">' + sh[0] + '</g>' + f + '</svg>';
+}
+function picker(){
+  var a = ui.av.split('-'), si = Number(a[0]), ci = Number(a[1]);
+  return '<div class="pick"><div class="pv">' + avatar(ui.av, 'happy') + '</div><div class="shapes">' + SHAPES.map(function(_, i){
+      return '<button data-act="av-s" data-i="' + i + '" aria-pressed="' + (i === si) + '" aria-label="도형 ' + (i + 1) + '">' + avatar(i + '-' + ci, 'neutral') + '</button>'; }).join('') +
+    '</div><div class="cols">' + COLORS.map(function(c, i){
+      return '<button data-act="av-c" data-i="' + i + '" aria-pressed="' + (i === ci) + '" aria-label="' + COLOR_NAMES[i] + '" style="background:' + c + '"></button>'; }).join('') + '</div></div>';
+}
 
 var S = null;              // 서버 상태(get_state)
 var token = null;
@@ -235,7 +339,7 @@ function demoState(){
   var s = dnum('2026-11-29'), today = s + 9, now = (today * 864e5) + 5 * 3600e3, id = 1;
   var people = [['온주',3,['instagram_reels','threads'],23,1],['하루',5,['blog'],61,1],['모아',1,['brunch'],4,1],
     ['단비',2,['newsletter'],11,0],['여름',4,['youtube_shorts'],9,1],['솔',3,['threads'],2,0]]
-    .map(function(a, i){ return { id:'demo-' + i, name:a[0], eid:i + 1, goal:a[1], types:a[2], channel:null, total:a[3], rally:a[4], best:a[4] }; });
+    .map(function(a, i){ return { id:'demo-' + i, name:a[0], avatar:((i * 4 + 2) % 9) + '-' + ((i * 5) % 9), eid:i + 1, goal:a[1], types:a[2], channel:null, total:a[3], rally:a[4], best:a[4] }; });
   var plan = [[0,2,4,7,9],[0,1,2,3,5,7,8],[3],[1],[0,1,2,3,7,8,9],[2,5,8]], posts = [];
   plan.forEach(function(days, i){ days.forEach(function(o, k){
     var other = (i === 0 && k === 3);
@@ -253,7 +357,7 @@ function demoRpc(name, a){
   if (name === 'get_profile'){
     var p = st.people.filter(function(x){ return x.id === a.p_participant; })[0] || st.people[0];
     var ps = st.posts.filter(function(x){ return x.pid === p.id; }).map(function(x){ return Object.assign({ season:2, open:false }, x); });
-    return { id:p.id, name:p.name, total:p.total, cheers:7, rally:p.rally, best:p.best, posts:ps,
+    return { id:p.id, name:p.name, avatar:p.avatar, total:p.total, cheers:7, rally:p.rally, best:p.best, posts:ps,
       seasons:[{ number:2, goal:p.goal, types:p.types, weeks:[{week:1,final:true,ok:!!p.rally},{week:2,final:false,ok:false},{week:3,ok:null},{week:4,ok:null}] }] };
   }
   throw new Error(DEMO_MSG);
@@ -327,9 +431,9 @@ function head(){
     (LIVE ? '' : '<span class="demo">데모 모드 · 예시 데이터예요</span>') + '</header>';
 }
 function levelOverlay(){
-  var l = ui.levelUp, lv = LEVELS[l];
+  var l = ui.levelUp, lv = LEVELS[l], me = S && S.me;
   var line = l === 1 ? '첫 번째 툭, 축하해요. 시작이 제일 어려운 법이에요.' : '누적 ' + lv.at + '개를 넘었어요. 꾸준함이 쌓이고 있어요.';
-  return '<div class="overlay"><div class="box"><div class="lv l' + l + '">' + esc(lv.n) + '</div><h2>' + esc(lv.n) + '</h2><p>' + line + '</p>' +
+  return '<div class="overlay" style="background:' + colorOf(me) + '"><div class="box">' + avatar(avOf(me), 'happy', tintOf(me)) + '<h2>' + esc(lv.n) + '</h2><p>' + line + '</p>' +
     '<button class="btn" data-act="levelok">확인</button></div></div>';
 }
 function typeOptions(sel){ return TYPE_KEYS.map(function(k){ return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + TYPES[k] + '</option>'; }).join(''); }
@@ -351,7 +455,8 @@ function homeView(){
 function loginPanel(){
   var h = '<div class="panel">';
   if (ui.step === 'name'){
-    h += '<h2>이름으로 시작하기</h2><input class="field" id="lname" data-keep maxlength="12" autocomplete="username" placeholder="이름 (닉네임)">' +
+    h += '<div class="hero">' + ['2-0','0-2','4-5','7-7','3-3'].map(function(a, i){ return avatar(a, i % 2 ? 'happy' : 'neutral'); }).join('') + '</div>' +
+      '<h2>이름으로 시작하기</h2><input class="field" id="lname" data-keep maxlength="12" autocomplete="username" placeholder="이름 (닉네임)">' +
       '<button class="btn" data-act="l-next">다음</button><p class="hint">처음이면 가입, 등록한 적 있으면 로그인으로 이어져요.</p>';
   } else {
     var isNew = ui.step !== 'pin';
@@ -370,10 +475,11 @@ function enrollPanel(c){
   if (!ui.picked){
     var prev = S.me.prev; ui.types = {}; ui.goal = 3;
     if (prev){ (prev.types || []).forEach(function(k){ ui.types[k] = true; }); ui.goal = prev.goal || 3; }
-    ui.picked = true; ui.prevChannel = prev && prev.channel || '';
+    ui.picked = true; ui.prevChannel = prev && prev.channel || ''; ui.av = avOf(S.me);
   }
   return '<div class="panel"><h2>' + c.se.number + '기 목표 정하기' + (ui.editEnroll ? '<button class="link" data-act="e-cancel">취소</button>' : '') + '</h2>' +
-    '<p class="label" style="margin-top:0">어떤 콘텐츠로 도전할까요? (여러 개 가능)</p>' + typeChips(ui.types, 'e-type') +
+    '<p class="label" style="margin-top:0">내 캐릭터 고르기</p>' + picker() +
+    '<p class="label">어떤 콘텐츠로 도전할까요? (여러 개 가능)</p>' + typeChips(ui.types, 'e-type') +
     '<p class="label">일주일에 몇 번 발행할까요?</p>' + goalChips(ui.goal, 'e-goal') +
     '<p class="hint">1개당 보증금 ' + won(c.per(ui.goal)) + ' · 주간 ' + won(c.se.weekly_deposit) + '</p>' +
     '<p class="label">대표 채널 주소 (선택)</p><input class="field" id="ech" data-keep type="url" inputmode="url" placeholder="https://" value="' + esc(ui.prevChannel || '') + '">' +
@@ -386,7 +492,8 @@ function postPanel(c){
   if (!me) return h + '<p class="hint">참가 정보를 불러오지 못했어요. 새로고침해 주세요.</p></div>';
   var cc = 0, today = 0;
   S.posts.forEach(function(x){ if (x.pid !== me.id) return; if (x.week === c.cur && x.counts) cc++; if (x.on === S.today) today++; });
-  h += '<h2>' + esc(me.name) + ' 님<small>주 ' + me.goal + '회 · ' + esc(typeLabels(me.types)) + '</small></h2>';
+  var mood = c.phase !== 'during' ? 'neutral' : (cc >= me.goal ? 'happy' : (cc ? 'neutral' : 'sleepy'));
+  h += '<h2><span class="hi">' + avatar(avOf(me), mood) + esc(me.name) + ' 님</span><small>주 ' + me.goal + '회 · ' + esc(typeLabels(me.types)) + '</small></h2>';
   if (c.phase === 'before'){
     h += '<button class="btn" disabled>' + mdK(c.se.starts_on) + '부터 인증할 수 있어요</button>' +
       '<button class="btn ghost sm" data-act="e-edit">참가 설정 수정</button>';
@@ -438,34 +545,35 @@ function board(c){
   var h = '<div class="sec"><h2>' + w + '주차 현황</h2><span>' + md(dstr(c.s + (w - 1) * 7)) + '~' + md(dstr(c.s + w * 7 - 1)) + '</span></div>' + tabs;
   if (fin && fin.pool === 0 && rows.length) h += '<div class="banner">상금 0원 · 전원 달성 🎉</div>';
   h += '<div class="stats">' +
-    '<div class="stat"><small>달성</small><b class="num">' + (started ? ach : 0) + '명</b></div>' +
-    '<div class="stat"><small>' + (fin ? '미달성' : '진행 중') + '</small><b class="num">' + (started ? rows.length - ach : rows.length) + '명</b></div>' +
-    '<div class="stat"><small>이번 주 전체 발행</small><b class="num">' + total + '개</b></div>' +
-    '<div class="stat"><small>' + (fin ? '상금 풀 (확정)' : '예상 상금 풀') + '</small><b class="num">' + (started ? won(pool) : '—') + '</b>' +
+    '<div class="stat s0"><small>달성</small><b class="num">' + (started ? ach : 0) + '명</b></div>' +
+    '<div class="stat s1"><small>' + (fin ? '미달성' : '진행 중') + '</small><b class="num">' + (started ? rows.length - ach : rows.length) + '명</b></div>' +
+    '<div class="stat s2"><small>이번 주 전체 발행</small><b class="num">' + total + '개</b></div>' +
+    '<div class="stat s3"><small>' + (fin ? '상금 풀 (확정)' : '예상 상금 풀') + '</small><b class="num">' + (started ? won(pool) : '—') + '</b>' +
       (fin ? '<small>' + (fin.achievers ? '달성 ' + fin.achievers + '명 · 1인 ' + won(fin.reward) : '달성자 없음') + '</small>' : (started ? '<small>지금 마감한다면</small>' : '')) + '</div></div>';
   if (!rows.length) return h + '<p class="empty">첫 번째 참가자가 되어 주세요.</p>';
   h += rows.map(function(r){
-    var p = r.p, lv = levelOf(p.total), segs = '';
+    var p = r.p, lv = levelOf(p.total), segs = '', mine = S.me && S.me.id === p.id;
     for (var k = 0; k < p.goal; k++) segs += '<i' + (k < r.cc ? ' class="on"' : '') + '></i>';
     var rally = p.rally ? '<span class="tag rally' + (p.rally >= 4 ? ' hot' : '') + '">랠리 ' + p.rally + '</span>' : '';
     if (!fin && w === c.cur && c.phase === 'during' && r.ok) rally += '<span class="tag soft">랠리 ' + (p.rally + 1) + ' 예정</span>';
-    return '<button class="prow' + (S.me && S.me.id === p.id ? ' me' : '') + '" data-act="profile" data-id="' + esc(p.id) + '">' +
-      '<div class="r1"><b>' + esc(p.name) + '</b>' + (S.me && S.me.id === p.id ? '<span class="tag">나</span>' : '') +
-        (lv >= 3 ? '<span class="tag t">' + LEVELS[lv].n + '</span>' : '') + rally +
-        '<span class="cnt num">' + r.cc + '/' + p.goal + (r.ok ? ' ✓' : '') + '</span></div>' +
+    var mood = !started ? 'neutral' : (r.ok ? 'happy' : (r.cc ? 'neutral' : 'sleepy'));
+    return '<button class="prow' + (mine ? ' me' : '') + '" style="background:' + colorOf(p) + '" data-act="profile" data-id="' + esc(p.id) + '">' +
+      '<div class="r1"><b>' + esc(p.name) + '</b>' + (mine ? '<span class="tag mine">나</span>' : '') +
+        (lv >= 3 ? '<span class="tag t">' + LEVELS[lv].n + '</span>' : '') + rally + '</div>' +
       '<div class="r2">' + esc(typeLabels(p.types)) + (r.other ? ' · 기타 발행 +' + r.other : '') + '</div>' +
-      '<div class="segs' + (r.ok ? ' done' : '') + '">' + segs + '</div></button>';
+      '<span class="cnt num">' + r.cc + '/' + p.goal + (r.ok ? ' ✓' : '') + '</span>' +
+      '<div class="segs' + (r.ok ? ' done' : '') + '">' + segs + '</div>' + avatar(avOf(p), mood, tintOf(p)) + '</button>';
   }).join('');
   return h;
 }
 function feed(c){
-  var names = {}; S.people.forEach(function(p){ names[p.id] = p.name; });
+  var names = {}, pp = {}; S.people.forEach(function(p){ names[p.id] = p.name; pp[p.id] = p; });
   var list = S.posts.filter(function(x){ return c.now - x.at < 48 * 3600e3; });
   var h = '<div class="sec"><h2>오늘의 툭</h2><span>최근 48시간</span></div>';
   if (!list.length) return h + '<p class="empty">아직 올라온 콘텐츠가 없어요.</p>';
   return h + '<div class="feed">' + list.map(function(x){
     var mine = S.me && S.me.id === x.pid, u = safeUrl(x.url);
-    return '<div class="fitem"><div class="who"><b>' + esc(names[x.pid] || '') + '</b> <span>' + esc(TYPES[x.type] || '') + ' · ' + md(x.on) + '</span>' +
+    return '<div class="fitem">' + avatar(avOf(pp[x.pid] || { id:x.pid }), 'happy') + '<div class="who"><b>' + esc(names[x.pid] || '') + '</b> <span>' + esc(TYPES[x.type] || '') + ' · ' + md(x.on) + '</span>' +
       (u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(host(u)) + ' 열기 ↗</a>' : '') + '</div>' +
       (mine ? '<span class="cheer mine num">응원 ' + x.cheers + '</span>'
             : '<button class="cheer num" data-act="cheer" data-id="' + x.id + '" aria-pressed="' + !!x.cheered + '">' + (x.cheered ? '응원했어요' : '응원하기') + (x.cheers ? ' ' + x.cheers : '') + '</button>') + '</div>';
@@ -485,11 +593,14 @@ function profileView(){
   var posts = p.posts.filter(function(x){ return ui.fSeason === 'all' || String(x.season) === String(ui.fSeason); });
   posts.forEach(function(x){ counts[x.type] = (counts[x.type] || 0) + 1; });
   var shown = posts.filter(function(x){ return !ui.fType || x.type === ui.fType; });
-  var h = back + '<div class="panel' + (lv >= 4 ? ' th' + lv : '') + '"><div class="phead"><div class="lv l' + lv + '">' + LEVELS[lv].n + '</div><div><h1>' + esc(p.name) + '</h1>' +
+  var h = back + '<div class="pcard" style="background:' + colorOf(p) + '"><span class="tag">' + LEVELS[lv].n + '</span><h1>' + esc(p.name) + '</h1>' +
     '<p class="num">누적 발행 ' + p.total + '개 · ' + (next ? '다음 레벨까지 ' + (next.at - p.total) + '개' : '최고 레벨') + '</p>' +
-    '<p class="num">랠리 ' + p.rally + ' · 최고 ' + p.best + ' · 받은 응원 ' + p.cheers + '</p></div></div></div>';
+    '<p class="num">랠리 ' + p.rally + ' · 최고 ' + p.best + ' · 받은 응원 ' + p.cheers + '</p>' +
+    (mine ? '<button class="link" data-act="av-edit">캐릭터 바꾸기</button>' : '') + avatar(avOf(p), p.rally ? 'happy' : 'neutral', tintOf(p)) + '</div>';
+  if (mine && ui.avEdit) h += '<div class="panel"><h2>내 캐릭터<button class="link" data-act="av-cancel">취소</button></h2>' + picker() + '<button class="btn" data-act="av-save">이 캐릭터로 저장</button></div>';
   h += '<div class="panel"><h2>주간 달성 기록</h2>' + (p.seasons.length ? p.seasons.map(function(s){
-    return '<div class="strip"><b>' + s.number + '기</b><span class="dots">' + s.weeks.map(function(w){ return w.ok == null ? '·' : (w.ok ? '●' : '○'); }).join('') +
+    return '<div class="strip"><b>' + s.number + '기</b><span class="tiles">' + s.weeks.map(function(w){
+        return w.ok == null ? '<i></i>' : (w.ok ? avatar(avOf(p), 'happy') : avatar(avOf(p), 'sleepy', '#E6DED4')); }).join('') +
       '</span><span>주 ' + s.goal + '회 · ' + esc(typeLabels(s.types)) + '</span></div>'; }).join('') : '<p class="hint">아직 참가한 시즌이 없어요.</p>') + '</div>';
   h += '<div class="panel"><h2>발행 기록<select class="field" id="fseason" style="width:auto;height:36px;font-size:13px;padding:0 10px"><option value="all">전체</option>' +
     p.seasons.map(function(s){ return '<option value="' + s.number + '"' + (String(ui.fSeason) === String(s.number) ? ' selected' : '') + '>' + s.number + '기</option>'; }).join('') + '</select></h2>' +
@@ -648,8 +759,18 @@ document.addEventListener('click', function(ev){
   else if (a === 'e-save') run(async function(){
     var types = TYPE_KEYS.filter(function(k){ return ui.types[k]; });
     if (!types.length) throw new Error('목표 콘텐츠 유형을 하나 이상 골라 주세요.');
+    if (ui.av && ui.av !== S.me.avatar) await rpc('set_avatar', { p_token:token, p_avatar:ui.av });
     await rpc('enroll', { p_token:token, p_goal_types:types, p_weekly_goal:ui.goal, p_main_channel_url:val('ech') || null });
     ui.editEnroll = false; toast('목표를 정했어요. 주 ' + ui.goal + '회, 같이 가요.');
+  });
+
+  /* 캐릭터 */
+  else if (a === 'av-s'){ ui.av = b.dataset.i + '-' + ui.av.split('-')[1]; render(); }
+  else if (a === 'av-c'){ ui.av = ui.av.split('-')[0] + '-' + b.dataset.i; render(); }
+  else if (a === 'av-edit'){ ui.avEdit = true; ui.av = avOf(S.me); render(); }
+  else if (a === 'av-cancel'){ ui.avEdit = false; render(); }
+  else if (a === 'av-save') run(async function(){
+    await rpc('set_avatar', { p_token:token, p_avatar:ui.av }); ui.avEdit = false; toast('캐릭터를 바꿨어요.');
   });
 
   /* 발행 인증 */
