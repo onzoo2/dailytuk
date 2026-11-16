@@ -211,6 +211,13 @@
   .stat.sp{background:var(--card);border:1px solid var(--line)}
   .stat.sp small{color:var(--muted)}
   .pcard{min-height:132px}
+  .brand{display:flex;justify-content:space-between;align-items:center}
+  .brand .link{font-weight:600;color:var(--ink);padding:2px}
+  .guide{font-size:14px}
+  .guide p{margin-top:10px}
+  .guide ol{padding-left:20px}
+  .guide li{margin-top:6px}
+  .guide table{margin-top:10px}
 </style>
 </head>
 <body>
@@ -412,6 +419,7 @@ function render(){
   if (!S) html += '<p class="empty">' + esc(ui.loadError || '불러오는 중…') + '</p>';
   else if (view.name === 'profile') html += profileView();
   else if (view.name === 'admin') html += adminView();
+  else if (view.name === 'guide') html += guideView();
   else html += homeView();
   if (ui.toast) html += '<div class="toast" role="status" data-act="toast">' + esc(ui.toast) + '</div>';
   if (ui.levelUp != null) html += levelOverlay();
@@ -433,7 +441,7 @@ function head(){
       pct = (c.idx + 1) / (c.weeks * 7) * 100;
     } else { t = c.se.number + '기 완주'; sub = range + (c.open(c.weeks) ? ' · 마지막 주 인증은 오늘 낮 12시까지' : ''); pct = 100; }
   }
-  return '<header><div class="brand">' + brand + '</div><div class="title num">' + t + '</div>' +
+  return '<header><div class="brand">' + brand + '<button class="link" data-act="guide">서비스 가이드</button></div><div class="title num">' + t + '</div>' +
     (sub ? '<div class="sub">' + sub + '</div>' : '') + '<div class="track"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
     (LIVE ? '' : '<span class="demo">데모 모드 · 예시 데이터예요</span>') + '</header>';
 }
@@ -649,6 +657,37 @@ function profileView(){
   return h + '</div>';
 }
 
+/* ───────── 화면: 서비스 가이드 ───────── */
+function guideView(){
+  var c = ctx(), dep = c ? c.se.weekly_deposit : 30000, weeks = c ? c.weeks : 4;
+  function sec(id, title, body, open){ return '<div class="panel"><details id="g-' + id + '"' + (open ? ' open' : '') + '><summary>' + title + '</summary><div class="guide">' + body + '</div></details></div>'; }
+  var per = ''; for (var g = 1; g <= 5; g++) per += '<tr><td>주 ' + g + '회</td><td class="num">' + won(dep / g) + '</td></tr>';
+  var lv = LEVELS.map(function(l, i){ return '<tr><td>' + l.n + '</td><td class="num">' + (i ? '누적 ' + l.at + '개' : '시작') + '</td></tr>'; }).join('');
+  return '<button class="link" data-act="home" style="margin-bottom:8px">← 보드로</button>' +
+    sec('how', '참여 방법', '<ol><li>이름과 PIN 4자리로 가입해요.</li><li>내 캐릭터, 목표 콘텐츠 유형, 주간 목표(1~5회)를 정해요. 시즌이 시작되면 바꿀 수 없어요.</li>' +
+      '<li>콘텐츠를 발행한 뒤 링크를 붙여넣고 인증해요. 유형은 링크를 보고 자동으로 분류돼요.</li></ol>', true) +
+    sec('week', '주간 기준', '<p>한 주는 <b>일요일 00:00부터 토요일 23:59까지</b>(한국 시간)예요.</p>' +
+      '<p>주차는 인증한 날이 아니라 <b>발행일</b>로 정해져요. 지난주에 발행한 콘텐츠는 <b>일요일 낮 12시</b>까지 인증할 수 있고, 그 뒤에는 운영자에게 알려 주세요.</p>' +
+      '<p>그 주에 목표 유형의 콘텐츠를 주간 목표만큼 인증하면 달성이에요. 넘치게 발행한 만큼은 다음 주로 넘어가지 않아요.</p>') +
+    sec('money', '보증금과 리워드', '<p>보증금은 <b>' + won(dep * weeks) + '</b>이에요. (주 ' + won(dep) + ' × ' + weeks + '주)</p>' +
+      '<table><tr><th>주간 목표</th><th>콘텐츠 1개당 보증금</th></tr>' + per + '</table>' +
+      '<p><b>차감</b> · 그 주에 못 채운 개수 × 1개당 보증금이 차감돼요. 차감된 금액은 그 주의 상금 풀에 모여요.</p>' +
+      '<p><b>리워드</b> · 상금 풀을 그 주 달성자 수로 똑같이 나눠요. 1원 미만은 버리고, 달성자가 없는 주의 상금 풀과 자투리는 운영비로 쓰여요. 리워드는 매주 계좌로 송금돼요.</p>' +
+      '<p><b>환급</b> · ' + won(dep * weeks) + '에서 ' + weeks + '주 차감 합계를 뺀 금액을 시즌이 끝난 뒤 한 번에 돌려드려요.</p>' +
+      '<p>내 차감액과 환급 예정액은 홈의 "내 정산"에서 볼 수 있어요. 다른 사람의 금액은 보이지 않아요.</p>') +
+    sec('level', '레벨 기준', '<p>레벨은 <b>누적 발행 수</b>로 올라요. 목표 유형이 아닌 발행도 모두 세요.</p><table><tr><th>레벨</th><th>기준</th></tr>' + lv + '</table>') +
+    sec('rally', '랠리 기준', '<p>랠리는 <b>연속으로 목표를 달성한 주 수</b>예요. 정산이 확정된 주만 세고, 달성하지 못한 주가 나오면 0으로 돌아가요.</p>' +
+      '<p>다음 시즌에 이어서 참가하면 랠리도 이어지고, 시즌을 건너뛰면 0으로 돌아가요. 가장 길었던 기록은 "최고 랠리"로 남아요.</p>') +
+    sec('faq', '자주 묻는 질문',
+      '<p><b>하루에 여러 개 발행해도 되나요?</b><br>네, 각각 인증하면 모두 인정돼요.</p>' +
+      '<p><b>목표 유형이 아닌 콘텐츠를 올리면요?</b><br>발행 기록과 레벨에는 들어가지만, 주간 달성과 정산에는 들어가지 않아요.</p>' +
+      '<p><b>유형이 잘못 분류됐어요.</b><br>"내 기록"에서 해당 콘텐츠의 "수정"을 눌러 고칠 수 있어요. 그 주 마감(일요일 낮 12시) 전까지 가능해요.</p>' +
+      '<p><b>인증을 깜빡했어요.</b><br>발행일을 그날로 고르면 다음 일요일 낮 12시까지 인증할 수 있어요. 그 뒤에는 운영자에게 알려 주세요.</p>' +
+      '<p><b>같은 링크를 두 번 인증할 수 있나요?</b><br>아니요. 같은 링크는 한 번만 인정되고, 다른 참가자가 인증한 링크도 쓸 수 없어요.</p>' +
+      '<p><b>PIN을 잊었어요.</b><br>운영자에게 초기화를 요청해 주세요. 다음 로그인 때 새 PIN을 정하게 돼요.</p>' +
+      '<p><b>목표를 바꾸고 싶어요.</b><br>시즌 시작 전에는 직접 바꿀 수 있고, 시작한 뒤에는 운영자에게 알려 주세요.</p>');
+}
+
 /* ───────── 화면: 운영자 ───────── */
 function adminView(){
   var back = '<button class="link" data-act="home" style="margin-bottom:8px">← 보드로</button>', A = ui.AD;
@@ -738,6 +777,7 @@ function route(){
   ui.edit = null; ui.fType = null;
   if (h.indexOf('p/') === 0){ view = { name:'profile', id:h.slice(2) }; ui.prof = null; ui.fSeason = 'all'; }
   else if (h === 'admin'){ view = { name:'admin' }; }
+  else if (h === 'guide'){ view = { name:'guide' }; }
   else view = { name:'home' };
   window.scrollTo(0, 0); render(); load();
 }
@@ -754,6 +794,7 @@ document.addEventListener('click', function(ev){
   else if (a === 'levelok'){ ui.levelUp = null; render(); }
   else if (a === 'home') go('');
   else if (a === 'go-admin') go('admin');
+  else if (a === 'guide') go('guide');
   else if (a === 'profile') go('p/' + id);
   else if (a === 'week'){ ui.week = Number(b.dataset.w); render(); }
 
