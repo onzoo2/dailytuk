@@ -218,6 +218,11 @@
   .guide ol{padding-left:20px}
   .guide li{margin-top:6px}
   .guide table{margin-top:10px}
+  .modal{position:fixed;inset:0;background:rgba(39,34,31,.5);display:grid;place-items:end center;z-index:25}
+  .modal .sheet{background:var(--card);border-radius:26px 26px 0 0;padding:26px 20px calc(22px + env(safe-area-inset-bottom));width:100%;max-width:480px;max-height:92vh;overflow:auto}
+  .modal h2,.sheet h2{font-size:20px;font-weight:800;margin-bottom:4px}
+  .kv td{padding:7px 2px}
+  .kv b{font-size:16px}
 </style>
 </head>
 <body>
@@ -423,6 +428,7 @@ function render(){
   else html += homeView();
   if (ui.toast) html += '<div class="toast" role="status" data-act="toast">' + esc(ui.toast) + '</div>';
   if (ui.levelUp != null) html += levelOverlay();
+  else if (view.name === 'home' && S && S.rejoin && S.rejoin.open && !S.rejoin.answer && !ui.rjSeen && S.me && S.me.enrolled) html += rejoinModal();
   $('app').innerHTML = html;
   Object.keys(keep).forEach(function(id){ var el = $(id); if (el && keep[id] !== '') el.value = keep[id]; });
   Object.keys(open).forEach(function(id){ var d = $(id); if (d) d.open = open[id]; });
@@ -481,7 +487,7 @@ function homeView(){
   var me = S.me, html = '';
   if (!me) html += loginPanel();
   else if (!me.enrolled || ui.editEnroll) html += enrollPanel(c);
-  else html += postPanel(c) + minePanel(c);
+  else html += postPanel(c) + rejoinPanel(c) + minePanel(c);
   html += board(c) + feed(c) + footer();
   return html;
 }
@@ -562,6 +568,46 @@ function minePanel(c){
   return '<div class="panel"><details id="mine"><summary>내 정산</summary><table><tr><th>주차</th><th>달성</th><th>차감</th><th>리워드</th></tr>' + rows + '</table>' +
     '<div class="total"><span>시즌 환급 예정액</span><b class="num">' + won(c.se.weekly_deposit * c.weeks - ded) + '</b></div>' +
     '<p class="hint">환급은 시즌이 끝난 뒤 한 번에, 리워드는 매주 따로 송금돼요.' + (rew ? ' 받은 리워드 합계 ' + won(rew) + '.' : '') + ' ✓ 는 송금 완료예요.</p></details></div>';
+}
+/* 다음 시즌 참가 여부 */
+function myMoney(c){
+  var me = S.people.filter(function(p){ return p.id === S.me.id; })[0], ded = 0, pending = false;
+  for (var w = 1; w <= c.weeks; w++){
+    var line = S.mine.filter(function(x){ return x.week === w; })[0];
+    if (line) ded += line.deduction;
+    else if (me && c.t >= c.s + w * 7){ pending = true;
+      ded += Math.max(me.goal - S.posts.filter(function(x){ return x.pid === me.id && x.week === w && x.counts; }).length, 0) * c.per(me.goal); }
+    else pending = true;
+  }
+  return { ded:ded, remain:c.se.weekly_deposit * c.weeks - ded, pending:pending };
+}
+function rejoinRows(c, ans){
+  var R = S.rejoin, m = myMoney(c), h = '<table class="kv">';
+  function row(k, v, strong){ return '<tr><td>' + k + '</td><td class="num">' + (strong ? '<b>' + v + '</b>' : v) + '</td></tr>'; }
+  if (ans === 'join'){
+    h += row('유지되는 보증금', won(m.remain)) + row('부족한 보증금', won(m.ded)) + row('재참가비', won(R.fee)) + row('입금할 금액', won(m.ded + R.fee), true) +
+      (R.pay_info ? row('입금 계좌', esc(R.pay_info)) : '') + (R.pay_due ? row('입금 기한', mdK(R.pay_due)) : '');
+  } else {
+    h += row('돌려받는 보증금', won(m.remain), true) + (R.refund_on ? row('반환일', mdK(R.refund_on)) : '');
+  }
+  return h + '</table>' + (m.pending ? '<p class="hint">남은 주의 정산이 끝나면 금액이 확정돼요.</p>' : '');
+}
+function rejoinAsk(c){
+  var R = S.rejoin, next = c.se.number + 1;
+  return '<h2>' + next + '기도 함께할까요?</h2><p class="hint" style="margin-top:0">계속 참가하면 보증금이 그대로 이어져요.</p>' +
+    '<p class="label">계속 참가하면</p>' + rejoinRows(c, 'join') + '<p class="label">쉬어가면</p>' + rejoinRows(c, 'leave') +
+    '<button class="btn" data-act="rj-join">' + next + '기 계속 참가할게요</button><button class="btn ghost" data-act="rj-leave">이번엔 쉬어갈게요</button>' +
+    '<p class="hint">' + mdK(R.until) + '까지 답해 주세요. 응답이 없으면 보증금을 ' + (R.refund_on ? mdK(R.refund_on) + '에 ' : '') + '돌려드려요.</p>';
+}
+function rejoinModal(){ return '<div class="modal"><div class="sheet">' + rejoinAsk(ctx()) + '<button class="link" data-act="rj-later" style="display:block;margin:8px auto 0">나중에 답하기</button></div></div>'; }
+function rejoinPanel(c){
+  var R = S.rejoin; if (!R || S.today < R.from) return '';
+  var next = c.se.number + 1, ans = R.answer;
+  if (R.open && !ans) return '<div class="panel">' + rejoinAsk(c) + '</div>';
+  if (ans === 'join') return '<div class="panel"><h2>' + next + '기 참가 신청 완료</h2>' + rejoinRows(c, 'join') +
+    (R.open ? '<button class="btn ghost sm" data-act="rj-leave" data-confirm="한 번 더 누르면 쉬어가기로 바뀌어요">쉬어가기로 바꾸기</button>' : '') + '</div>';
+  return '<div class="panel"><h2>' + (ans ? '이번 시즌까지 함께해요' : '응답이 없어 보증금을 돌려드려요') + '</h2>' + rejoinRows(c, 'leave') +
+    (R.open ? '<button class="btn ghost sm" data-act="rj-join">' + next + '기 계속 참가로 바꾸기</button>' : '<p class="hint">다시 참가하고 싶다면 운영자에게 알려 주세요.</p>') + '</div>';
 }
 function board(c){
   var w = ui.week || c.cur; if (w > c.weeks) w = c.weeks;
@@ -717,6 +763,23 @@ function adminView(){
     return b + '</div>';
   }).join('') + '</div>';
 
+  var total = se.weekly_deposit * A.weeks.length, dedBy = {};
+  A.weeks.forEach(function(w){ if (w.final || w.closed) w.lines.forEach(function(l){ dedBy[l.eid] = (dedBy[l.eid] || 0) + l.deduction; }); });
+  var unsettled = A.weeks.some(function(w){ return !w.final; });
+  h += '<div class="panel"><details id="rejoin"><summary>다음 시즌 참가 받기</summary>' +
+    '<p class="label" style="margin-top:0">응답 받는 기간 (이 기간에 참가자에게 팝업이 떠요)</p><div class="row2"><input class="field" id="rjfrom" data-keep type="date" aria-label="응답 시작일" value="' + esc(se.rejoin_from || '') + '">' +
+    '<input class="field" id="rjuntil" data-keep type="date" aria-label="응답 마감일" value="' + esc(se.rejoin_until || '') + '"></div>' +
+    '<p class="label">재참가비 (원)</p><input class="field" id="rjfee" data-keep type="number" inputmode="numeric" value="' + (se.rejoin_fee || 0) + '">' +
+    '<p class="label">입금 계좌 안내</p><input class="field" id="rjpay" data-keep maxlength="80" placeholder="예: ○○은행 000-0000-0000 홍길동" value="' + esc(se.pay_info || '') + '">' +
+    '<p class="label">입금 기한 / 보증금 반환일</p><div class="row2"><input class="field" id="rjdue" data-keep type="date" aria-label="입금 기한" value="' + esc(se.pay_due || '') + '">' +
+    '<input class="field" id="rjrefund" data-keep type="date" aria-label="보증금 반환일" value="' + esc(se.refund_on || '') + '"></div>' +
+    '<button class="btn sm" data-act="a-rejoin">저장</button>' +
+    '<p class="label">응답 현황</p><table><tr><th>이름</th><th>응답</th><th>금액</th></tr>' + A.participants.filter(function(p){ return p.e; }).map(function(p){
+      var d = dedBy[p.e.id] || 0;
+      return '<tr><td>' + esc(p.name) + '</td><td>' + (p.intent === 'join' ? '계속 참가' : (p.intent === 'leave' ? '쉬어가기' : '미응답')) + '</td><td class="num">' +
+        (p.intent === 'join' ? '입금 ' + won(d + (se.rejoin_fee || 0)) : '반환 ' + won(total - d)) + '</td></tr>'; }).join('') + '</table>' +
+    '<p class="hint">입금 = 부족한 보증금 + 재참가비, 반환 = 남은 보증금이에요. 미응답은 반환으로 처리돼요.' + (unsettled ? ' 아직 확정되지 않은 주가 있어 금액이 바뀔 수 있어요.' : '') + '</p></details></div>';
+
   h += '<div class="panel"><h2>참가자 <small>' + A.participants.length + '명</small></h2>' + A.participants.map(function(p){
     var o = ui.aOpen && ui.aOpen.id === p.id ? ui.aOpen.mode : null;
     var b = '<div class="pline"><div class="r1"><b>' + esc(p.name) + '</b>' + (p.is_admin ? '<span class="tag t">운영자</span>' : '') + (p.has_pin ? '' : '<span class="tag soft">PIN 초기화됨</span>') + '</div>' +
@@ -833,6 +896,13 @@ document.addEventListener('click', function(ev){
     ui.editEnroll = false; toast('목표를 정했어요. 주 ' + ui.goal + '회, 같이 가요.');
   });
 
+  /* 다음 시즌 참가 여부 */
+  else if (a === 'rj-later'){ ui.rjSeen = true; render(); }
+  else if (a === 'rj-join' || a === 'rj-leave') run(async function(){
+    await rpc('set_rejoin', { p_token:token, p_answer: a === 'rj-join' ? 'join' : 'leave' }); ui.rjSeen = true;
+    toast(a === 'rj-join' ? '계속 함께해요. 입금 안내를 확인해 주세요.' : '응답을 저장했어요. 이번 시즌 끝까지 응원할게요.');
+  });
+
   /* 캐릭터 */
   else if (a === 'av-s'){ ui.av = b.dataset.i + '-' + ui.av.split('-')[1]; render(); }
   else if (a === 'av-c'){ ui.av = ui.av.split('-')[0] + '-' + b.dataset.i; render(); }
@@ -880,6 +950,11 @@ document.addEventListener('click', function(ev){
   else if (a === 'a-final') run(async function(){ await rpc('admin_finalize', { p_token:token, p_season_id:ui.AD.season.id, p_week_no:Number(b.dataset.w) }); toast(b.dataset.w + '주차 정산을 확정했어요.'); });
   else if (a === 'a-unfinal') run(async function(){ await rpc('admin_unfinalize', { p_token:token, p_season_id:ui.AD.season.id, p_week_no:Number(b.dataset.w) }); toast('확정을 풀었어요. 현재 인증 기준으로 다시 계산돼요.'); });
   else if (a === 'a-csv') csv();
+  else if (a === 'a-rejoin') run(async function(){
+    await rpc('admin_set_rejoin', { p_token:token, p_season_id:ui.AD.season.id, p_from:val('rjfrom') || null, p_until:val('rjuntil') || null,
+      p_fee:Number(val('rjfee')) || 0, p_pay_info:val('rjpay') || null, p_pay_due:val('rjdue') || null, p_refund_on:val('rjrefund') || null });
+    toast('다음 시즌 참가 안내를 저장했어요.');
+  });
   else if (a === 'a-open'){
     var same = ui.aOpen && ui.aOpen.id === id && ui.aOpen.mode === b.dataset.m;
     ui.aOpen = same ? null : { id:id, mode:b.dataset.m };

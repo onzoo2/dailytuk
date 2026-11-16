@@ -179,6 +179,22 @@ create table if not exists public.settlement_lines (
   foreign key (season_id, week_no) references public.weekly_settlements(season_id, week_no) on delete cascade
 );
 
+-- 다음 시즌 참가 여부 받기(운영자가 시즌마다 설정)
+alter table public.seasons add column if not exists rejoin_from  date;   -- 응답 시작일
+alter table public.seasons add column if not exists rejoin_until date;   -- 응답 마감일
+alter table public.seasons add column if not exists rejoin_fee   int not null default 0;   -- 재참가비
+alter table public.seasons add column if not exists pay_info     text;   -- 입금 계좌 안내
+alter table public.seasons add column if not exists pay_due      date;   -- 입금 기한
+alter table public.seasons add column if not exists refund_on    date;   -- 보증금 반환일
+
+create table if not exists public.season_intents (
+  participant_id uuid not null references public.participants(id) on delete cascade,
+  season_id      int  not null references public.seasons(id) on delete cascade,   -- 이 시즌이 끝난 뒤 다음 시즌에 대한 응답
+  answer         text not null check (answer in ('join', 'leave')),
+  answered_at    timestamptz not null default now(),
+  primary key (participant_id, season_id)
+);
+
 insert into public.seasons (number, starts_on, ends_on)
 values (2, '2026-11-29', '2026-12-26')
 on conflict (number) do nothing;
@@ -439,6 +455,23 @@ begin
   update participants set avatar = p_avatar where id = me.id;
 end $$;
 
+create or replace function public.set_rejoin(p_token text, p_answer text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me participants; s seasons;
+begin
+  me := _auth(p_token);
+  s := _current_season();
+  if s.id is null or s.rejoin_from is null or not (_today() between s.rejoin_from and s.rejoin_until) then
+    raise exception '지금은 응답 기간이 아니에요. 변경이 필요하면 운영자에게 알려 주세요.';
+  end if;
+  if not exists (select 1 from enrollments where participant_id = me.id and season_id = s.id) then
+    raise exception '이번 시즌 참가자만 응답할 수 있어요.';
+  end if;
+  if p_answer not in ('join', 'leave') then raise exception '응답을 다시 골라 주세요.'; end if;
+  insert into season_intents (participant_id, season_id, answer) values (me.id, s.id, p_answer)
+  on conflict (participant_id, season_id) do update set answer = excluded.answer, answered_at = now();
+end $$;
+
 create or replace function public.logout(p_token text) returns void
 language sql security definer set search_path = public, extensions as $$
   delete from sessions where token = p_token
@@ -520,7 +553,7 @@ language plpgsql stable security definer set search_path = public, extensions as
 declare
   me participants; has_me boolean := false; expired boolean := false; s seasons;
   v_people json := '[]'; v_posts json := '[]'; v_settled json := '[]'; v_me json; v_mine json := '[]';
-  v_seasons json; v_season json;
+  v_seasons json; v_season json; v_rejoin json;
 begin
   if coalesce(p_token, '') <> '' then
     select p.* into me from sessions x join participants p on p.id = x.participant_id
@@ -569,11 +602,18 @@ begin
       'prev', (select json_build_object('types', e.goal_types, 'goal', e.weekly_goal, 'channel', e.main_channel_url)
                from enrollments e join seasons se on se.id = e.season_id
                where e.participant_id = me.id order by se.number desc limit 1));
+    if s.id is not null and s.rejoin_from is not null
+       and exists (select 1 from enrollments where participant_id = me.id and season_id = s.id) then
+      v_rejoin := json_build_object('from', s.rejoin_from, 'until', s.rejoin_until, 'fee', s.rejoin_fee,
+        'pay_info', s.pay_info, 'pay_due', s.pay_due, 'refund_on', s.refund_on,
+        'open', _today() between s.rejoin_from and s.rejoin_until,
+        'answer', (select answer from season_intents where participant_id = me.id and season_id = s.id));
+    end if;
   end if;
 
   return json_build_object('now_ms', extract(epoch from now()) * 1000, 'today', _today(),
     'season', v_season, 'seasons', v_seasons, 'people', v_people, 'posts', v_posts,
-    'settled', v_settled, 'me', v_me, 'mine', v_mine, 'expired', expired);
+    'settled', v_settled, 'me', v_me, 'mine', v_mine, 'rejoin', v_rejoin, 'expired', expired);
 end $$;
 
 -- 개인 아카이브 (누구나 조회)
@@ -624,6 +664,7 @@ begin
          order by number), '[]'::json) into v_seasons from seasons;
   select coalesce(json_agg(json_build_object('id', p.id, 'name', p.name, 'avatar', p.avatar, 'is_admin', p.is_admin,
            'has_pin', p.pin_hash is not null,
+           'intent', (select i.answer from season_intents i where i.participant_id = p.id and i.season_id = s.id),
            'e', (select json_build_object('id', e.id, 'types', e.goal_types, 'goal', e.weekly_goal, 'channel', e.main_channel_url)
                  from enrollments e where e.participant_id = p.id and e.season_id = s.id)) order by p.name), '[]'::json)
     into v_parts from participants p;
@@ -632,7 +673,9 @@ begin
     from generate_series(1, (s.ends_on - s.starts_on + 1) / 7) g(w);
   end if;
   return json_build_object('season', case when s.id is null then null else
-      json_build_object('id', s.id, 'number', s.number, 'starts_on', s.starts_on, 'ends_on', s.ends_on, 'weekly_deposit', s.weekly_deposit) end,
+      json_build_object('id', s.id, 'number', s.number, 'starts_on', s.starts_on, 'ends_on', s.ends_on, 'weekly_deposit', s.weekly_deposit,
+        'rejoin_from', s.rejoin_from, 'rejoin_until', s.rejoin_until, 'rejoin_fee', s.rejoin_fee,
+        'pay_info', s.pay_info, 'pay_due', s.pay_due, 'refund_on', s.refund_on) end,
     'seasons', v_seasons, 'participants', v_parts, 'weeks', coalesce(v_weeks, '[]'::json));
 end $$;
 
@@ -650,6 +693,19 @@ begin
     raise exception '다른 시즌과 기간이 겹쳐요. 날짜를 다시 확인해 주세요.';
   end if;
   insert into seasons (number, starts_on, ends_on) values (p_number, p_starts_on, p_ends_on);
+end $$;
+
+create or replace function public.admin_set_rejoin(p_token text, p_season_id int, p_from date, p_until date,
+  p_fee int, p_pay_info text, p_pay_due date, p_refund_on date) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+begin
+  perform _admin(p_token);
+  if (p_from is null) <> (p_until is null) then raise exception '응답 시작일과 마감일을 둘 다 넣어 주세요.'; end if;
+  if p_from is not null and p_until < p_from then raise exception '응답 마감일이 시작일보다 빨라요.'; end if;
+  if coalesce(p_fee, 0) < 0 then raise exception '재참가비는 0원 이상으로 적어 주세요.'; end if;
+  update seasons set rejoin_from = p_from, rejoin_until = p_until, rejoin_fee = coalesce(p_fee, 0),
+    pay_info = nullif(btrim(coalesce(p_pay_info, '')), ''), pay_due = p_pay_due, refund_on = p_refund_on
+  where id = p_season_id;
 end $$;
 
 create or replace function public.admin_set_enrollment(p_token text, p_participant uuid, p_season_id int,
@@ -752,9 +808,10 @@ alter table public.cheers             enable row level security;
 alter table public.sessions           enable row level security;
 alter table public.weekly_settlements enable row level security;
 alter table public.settlement_lines   enable row level security;
+alter table public.season_intents     enable row level security;
 
 revoke all on public.participants, public.seasons, public.enrollments, public.posts, public.cheers,
-  public.sessions, public.weekly_settlements, public.settlement_lines from anon, authenticated;
+  public.sessions, public.weekly_settlements, public.settlement_lines, public.season_intents from anon, authenticated;
 
 do $$
 declare f record;
@@ -764,7 +821,7 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and (p.proname like '\_%' or p.proname like 'admin\_%'
-           or p.proname in ('name_status','register','login','logout','set_avatar','enroll','add_post','update_post',
+           or p.proname in ('name_status','register','login','logout','set_avatar','set_rejoin','enroll','add_post','update_post',
                             'delete_post','toggle_cheer','get_state','get_profile'))
   loop
     if f.proname like '\_%' then
