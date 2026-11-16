@@ -205,6 +205,12 @@
   .overlay h2{font-size:34px;font-weight:800;letter-spacing:-.03em}
   .overlay p{color:var(--ink);font-size:15px;max-width:280px}
   .overlay .btn{max-width:320px;margin-top:26px}
+  .ti{flex:none;width:34px;height:34px;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink)}
+  .pitem .l1 .d{width:38px}
+  .pitem .l2{margin-left:42px}
+  .stat.sp{background:var(--card);border:1px solid var(--line)}
+  .stat.sp small{color:var(--muted)}
+  .pcard{min-height:132px}
 </style>
 </head>
 <body>
@@ -412,6 +418,7 @@ function render(){
   $('app').innerHTML = html;
   Object.keys(keep).forEach(function(id){ var el = $(id); if (el && keep[id] !== '') el.value = keep[id]; });
   Object.keys(open).forEach(function(id){ var d = $(id); if (d) d.open = open[id]; });
+  syncAuto();
   if (f && $(f) && f !== 'body') { try { $(f).focus({ preventScroll:true }); } catch(e){} }
 }
 function head(){
@@ -436,6 +443,24 @@ function levelOverlay(){
   return '<div class="overlay" style="background:' + colorOf(me) + '"><div class="box">' + avatar(avOf(me), 'happy', tintOf(me)) + '<h2>' + esc(lv.n) + '</h2><p>' + line + '</p>' +
     '<button class="btn" data-act="levelok">확인</button></div></div>';
 }
+function syncAuto(){
+  var u = $('purl'), o = $('pauto'); if (!u || !o) return;
+  var v = u.value.trim(); if (!v){ o.textContent = ''; return; }
+  var t = classify(v), me = S && S.me && S.people.filter(function(p){ return p.id === S.me.id; })[0];
+  o.textContent = '자동 분류: ' + TYPES[t] + (me && me.types.indexOf(t) < 0 ? ' · 내 챌린지 목표 외' : '');
+}
+var ICONS = {
+  instagram_reels:'<rect x="6" y="3" width="12" height="18" rx="3"/><path d="M10.5 9v6l5-3z" fill="currentColor"/>',
+  instagram_post:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M4 16l4.5-4.5 3.5 3.5 2.5-2.5L20 17"/><circle cx="15.5" cy="8.5" r="1.2" fill="currentColor"/>',
+  threads:'<path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-4 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/><path d="M8 9.5h8M8 12.5h5"/>',
+  youtube_long:'<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M10.5 9.5v5l4.5-2.5z" fill="currentColor"/>',
+  youtube_shorts:'<circle cx="12" cy="12" r="9"/><path d="M10.5 8.5v7l5.5-3.5z" fill="currentColor"/>',
+  newsletter:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 8l9 6 9-6"/>',
+  blog:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>',
+  brunch:'<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M13.5 7.5l3 3"/>',
+  other:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3A4 4 0 0 0 13 5.3l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/>'
+};
+function typeIcon(t){ return '<svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="' + (TYPES[t] || '') + '">' + (ICONS[t] || ICONS.other) + '</svg>'; }
 function typeOptions(sel){ return TYPE_KEYS.map(function(k){ return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + TYPES[k] + '</option>'; }).join(''); }
 function typeChips(map, act){ return '<div class="chips">' + TYPE_KEYS.map(function(k){
   return '<button class="chip" data-act="' + act + '" data-k="' + k + '" aria-pressed="' + !!map[k] + '">' + TYPES[k] + '</button>'; }).join('') + '</div>'; }
@@ -502,8 +527,8 @@ function postPanel(c){
   } else {
     if (today) h += '<div class="ok">오늘 ' + today + '개 발행 완료 ✓</div>';
     h += '<input class="field" id="purl" data-keep type="url" inputmode="url" autocomplete="off" placeholder="발행한 콘텐츠 링크 붙여넣기">' +
-      '<div class="row2"><select class="field" id="ptype" data-keep aria-label="콘텐츠 유형">' + typeOptions('other') + '</select>' +
-      '<input class="field" id="pon" data-keep type="date" aria-label="발행일" value="' + S.today + '" min="' + c.minDate + '" max="' + S.today + '"></div>' +
+      '<div class="row2"><input class="field" id="pon" data-keep type="date" aria-label="발행일" value="' + S.today + '" min="' + c.minDate + '" max="' + S.today + '"></div>' +
+      '<p class="hint" id="pauto" style="min-height:20px"></p>' +
       '<button class="btn" data-act="p-add"' + (busy ? ' disabled' : '') + '>' + (today ? '하나 더 인증하기' : '발행 인증하기') + '</button>';
     if (c.phase === 'during') h += '<p class="hint">' + (cc >= me.goal ? '이번 주 목표를 채웠어요. 멋져요.' : '이번 주 ' + cc + '/' + me.goal + ' · 목표까지 ' + (me.goal - cc) + '개') + '</p>';
   }
@@ -575,8 +600,7 @@ function feed(c){
     var mine = S.me && S.me.id === x.pid, u = safeUrl(x.url);
     return '<div class="fitem">' + avatar(avOf(pp[x.pid] || { id:x.pid }), 'happy') + '<div class="who"><b>' + esc(names[x.pid] || '') + '</b> <span>' + esc(TYPES[x.type] || '') + ' · ' + md(x.on) + '</span>' +
       (u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(host(u)) + ' 열기 ↗</a>' : '') + '</div>' +
-      (mine ? '<span class="cheer mine num">응원 ' + x.cheers + '</span>'
-            : '<button class="cheer num" data-act="cheer" data-id="' + x.id + '" aria-pressed="' + !!x.cheered + '">' + (x.cheered ? '응원했어요' : '응원하기') + (x.cheers ? ' ' + x.cheers : '') + '</button>') + '</div>';
+      '</div>';
   }).join('') + '</div>';
 }
 function footer(){
@@ -594,9 +618,13 @@ function profileView(){
   posts.forEach(function(x){ counts[x.type] = (counts[x.type] || 0) + 1; });
   var shown = posts.filter(function(x){ return !ui.fType || x.type === ui.fType; });
   var h = back + '<div class="pcard" style="background:' + colorOf(p) + '"><span class="tag">' + LEVELS[lv].n + '</span><h1>' + esc(p.name) + '</h1>' +
-    '<p class="num">누적 발행 ' + p.total + '개 · ' + (next ? '다음 레벨까지 ' + (next.at - p.total) + '개' : '최고 레벨') + '</p>' +
-    '<p class="num">랠리 ' + p.rally + ' · 최고 ' + p.best + ' · 받은 응원 ' + p.cheers + '</p>' +
     (mine ? '<button class="link" data-act="av-edit">캐릭터 바꾸기</button>' : '') + avatar(avOf(p), p.rally ? 'happy' : 'neutral', tintOf(p)) + '</div>';
+  var base = LEVELS[lv].at, pctLv = next ? Math.round((p.total - base) / (next.at - base) * 100) : 100;
+  h += '<div class="stats"><div class="stat sp"><small>누적 발행</small><b class="num">' + p.total + '개</b></div>' +
+    '<div class="stat sp"><small>' + (next ? '다음 레벨 ' + next.n + '까지' : '레벨') + '</small><b class="num">' + (next ? (next.at - p.total) + '개' : '최고 레벨') + '</b>' +
+      '<div class="track" style="margin-top:8px"><i style="width:' + pctLv + '%"></i></div></div>' +
+    '<div class="stat sp"><small>랠리 (연속 달성)</small><b class="num">' + p.rally + '주</b></div>' +
+    '<div class="stat sp"><small>최고 랠리</small><b class="num">' + p.best + '주</b></div></div>';
   if (mine && ui.avEdit) h += '<div class="panel"><h2>내 캐릭터<button class="link" data-act="av-cancel">취소</button></h2>' + picker() + '<button class="btn" data-act="av-save">이 캐릭터로 저장</button></div>';
   h += '<div class="panel"><h2>주간 달성 기록</h2>' + (p.seasons.length ? p.seasons.map(function(s){
     return '<div class="strip"><b>' + s.number + '기</b><span class="tiles">' + s.weeks.map(function(w){
@@ -609,9 +637,9 @@ function profileView(){
   if (!shown.length) h += '<p class="empty">아직 발행 기록이 없어요.</p>';
   h += shown.map(function(x){
     var u = safeUrl(x.url), can = admin || (mine && x.open);
-    var row = '<div class="pitem"><div class="l1"><span class="d num">' + md(x.on) + '</span>' +
+    var row = '<div class="pitem"><div class="l1">' + typeIcon(x.type) + '<span class="d num">' + md(x.on) + '</span>' +
       (u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(host(u)) + ' ↗</a>' : '<a>링크</a>') + '</div>' +
-      '<div class="l2"><span>' + esc(TYPES[x.type] || '') + '</span>' + (x.counts ? '' : '<span class="tag soft">목표 외 발행</span>') + (x.cheers ? '<span>응원 ' + x.cheers + '</span>' : '') +
+      '<div class="l2"><span>' + esc(TYPES[x.type] || '') + '</span>' + (x.counts ? '' : '<span class="tag soft">목표 외 발행</span>') +
       (can ? '<button class="link" data-act="x-edit" data-id="' + x.id + '">수정</button><button class="link" data-act="x-del" data-id="' + x.id + '" data-confirm="한 번 더 누르면 삭제돼요">삭제</button>' : '') + '</div>';
     if (ui.edit === x.id) row += '<div class="row2" style="margin-left:50px"><select class="field" id="xtype" data-keep>' + typeOptions(x.type) + '</select>' +
       '<input class="field" id="xon" data-keep type="date" value="' + esc(x.on) + '"></div><div class="row2" style="margin-left:50px"><button class="btn sm" data-act="x-save" data-id="' + x.id + '">저장</button>' +
@@ -777,9 +805,9 @@ document.addEventListener('click', function(ev){
   else if (a === 'p-add') run(async function(){
     var url = val('purl'); if (!url) throw new Error('발행한 콘텐츠의 링크를 붙여넣어 주세요.');
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-    var r = await rpc('add_post', { p_token:token, p_url:url, p_published_on:val('pon') || null, p_content_type:val('ptype') || null });
-    $('purl').value = ''; ui.typeTouched = false;
-    toast(r.counts ? '툭. ' + r.week + '주차 ' + r.week_count + '/' + r.goal + ' · ' + (TYPES[r.type] || '') : '발행 기록에 추가됐어요 (챌린지 목표 외)');
+    var r = await rpc('add_post', { p_token:token, p_url:url, p_published_on:val('pon') || null, p_content_type:null });
+    $('purl').value = '';
+    toast(r.counts ? '툭. ' + r.week + '주차 ' + r.week_count + '/' + r.goal + ' · ' + (TYPES[r.type] || '') : '발행 기록에 추가됐어요 (' + (TYPES[r.type] || '') + ' · 챌린지 목표 외). 유형이 다르면 내 기록에서 고칠 수 있어요.');
     if (r.level_up) ui.levelUp = r.level;
   });
   else if (a === 'cheer') run(async function(){
@@ -841,8 +869,7 @@ document.addEventListener('click', function(ev){
 
 document.addEventListener('change', function(ev){
   var el = ev.target;
-  if (el.id === 'ptype') ui.typeTouched = true;
-  else if (el.id === 'fseason'){ ui.fSeason = el.value; ui.fType = null; render(); }
+  if (el.id === 'fseason'){ ui.fSeason = el.value; ui.fType = null; render(); }
   else if (el.id === 'aseason'){ ui.aSeason = Number(el.value); ui.aOpen = null; load(); }
   else if (el.dataset && el.dataset.act === 'a-paid') run(async function(){
     await rpc('admin_set_paid', { p_token:token, p_season_id:ui.AD.season.id, p_week_no:Number(el.dataset.w), p_enrollment_id:Number(el.dataset.e), p_paid:el.checked });
@@ -850,7 +877,7 @@ document.addEventListener('change', function(ev){
 });
 document.addEventListener('input', function(ev){
   var el = ev.target;
-  if (el.id === 'purl' && !ui.typeTouched && $('ptype')) $('ptype').value = classify(el.value);
+  if (el.id === 'purl') syncAuto();
   if (el.id === 'aurl' && $('atype')) $('atype').value = classify(el.value);
 });
 document.addEventListener('keydown', function(ev){
