@@ -108,6 +108,8 @@ create table if not exists public.participants (
   created_at   timestamptz not null default now()
 );
 alter table public.participants add column if not exists avatar text;      -- 캐릭터 '도형-색' (예: 3-5)
+alter table public.participants add column if not exists account_intro  text;   -- 계정 한 줄 소개(선택)
+alter table public.participants add column if not exists account_target text;   -- 타겟(선택)
 create unique index if not exists participants_name_norm_key on public.participants (public._norm(name));
 
 create table if not exists public.seasons (
@@ -472,6 +474,17 @@ begin
   on conflict (participant_id, season_id) do update set answer = excluded.answer, answered_at = now();
 end $$;
 
+create or replace function public.set_account_info(p_token text, p_intro text, p_target text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me participants; v_i text := nullif(btrim(coalesce(p_intro, '')), ''); v_t text := nullif(btrim(coalesce(p_target, '')), '');
+begin
+  me := _auth(p_token);
+  if char_length(coalesce(v_i, '')) > 100 or char_length(coalesce(v_t, '')) > 100 then
+    raise exception '소개와 타겟은 각각 100자 안으로 적어 주세요.';
+  end if;
+  update participants set account_intro = v_i, account_target = v_t where id = me.id;
+end $$;
+
 create or replace function public.logout(p_token text) returns void
 language sql security definer set search_path = public, extensions as $$
   delete from sessions where token = p_token
@@ -648,6 +661,7 @@ begin
   where e.participant_id = p.id;
 
   return json_build_object('id', p.id, 'name', p.name, 'avatar', p.avatar,
+    'intro', p.account_intro, 'target', p.account_target,
     'total', (select count(*) from posts where participant_id = p.id),
     'cheers', (select count(*) from cheers c join posts po on po.id = c.post_id where po.participant_id = p.id),
     'rally', rc, 'best', rb, 'posts', v_posts, 'seasons', v_seasons);
@@ -821,7 +835,7 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and (p.proname like '\_%' or p.proname like 'admin\_%'
-           or p.proname in ('name_status','register','login','logout','set_avatar','set_rejoin','enroll','add_post','update_post',
+           or p.proname in ('name_status','register','login','logout','set_avatar','set_rejoin','set_account_info','enroll','add_post','update_post',
                             'delete_post','toggle_cheer','get_state','get_profile'))
   loop
     if f.proname like '\_%' then
