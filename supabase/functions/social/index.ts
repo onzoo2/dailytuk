@@ -45,7 +45,7 @@ async function reader() {
 }
 
 // 아이디 하나의 공개 수치(팔로워, 최근 게시물 반응)를 받아 저장
-async function trackOne(pid, username, rd) {
+async function trackOne(pid, username, rd, reset) {
   const sets = [
     "username,followers_count,media_count,media.limit(30){permalink,timestamp,media_type,media_product_type,like_count,comments_count,view_count}",
     "username,followers_count,media_count,media.limit(30){permalink,timestamp,media_type,media_product_type,like_count,comments_count}",
@@ -58,6 +58,10 @@ async function trackOne(pid, username, rd) {
     } catch (e) { lastErr = String(e && e.message || e); }
   }
   if (!bd) throw new Error(lastErr || "조회하지 못했어요.");
+  if (reset) {                       // 다른 계정의 기록이 섞이지 않게, 아이디가 바뀌면 이전 기록을 지움
+    await db.from("follower_snapshots").delete().eq("participant_id", pid).eq("platform", "instagram");
+    await db.from("media_metrics").delete().eq("participant_id", pid).eq("platform", "instagram");
+  }
   const a = await db.from("follower_snapshots").upsert({ participant_id: pid, platform: "instagram", day: todayKST(), followers: bd.followers_count ?? 0 });
   if (a.error) throw new Error("저장 실패: " + a.error.message);
   const rows = ((bd.media && bd.media.data) || []).map((m) => ({
@@ -78,7 +82,7 @@ async function syncAll() {
   const { data: people } = await db.from("participants").select("id, name, ig_username").not("ig_username", "is", null);
   const out = [];
   for (const p of people || []) {
-    try { out.push({ name: p.name, ...(await trackOne(p.id, p.ig_username, rd)) }); }
+    try { out.push({ name: p.name, ...(await trackOne(p.id, p.ig_username, rd, false)) }); }
     catch (e) { out.push({ name: p.name, error: String(e && e.message || e) }); }
   }
   return { ok: true, day: todayKST(), results: out };
@@ -100,12 +104,9 @@ Deno.serve(async (req) => {
       const rd = await reader();
       if (!rd) return json({ error: "아직 수집 준비가 안 됐어요. 운영자에게 알려 주세요." }, 400);
       let sum;
-      try { sum = await trackOne(me.id, name, rd); }
+      try { sum = await trackOne(me.id, name, rd, me.ig_username !== name); }
       catch (e) {
         return json({ error: "이 아이디의 수치를 불러오지 못했어요. 아이디 철자와, 프로페셔널(비즈니스·크리에이터) 계정인지 확인해 주세요.", detail: String(e && e.message || e) }, 400);
-      }
-      if (me.ig_username && me.ig_username !== name) {           // 아이디를 바꾸면 이전 계정 기록은 지움
-        await db.from("follower_snapshots").delete().eq("participant_id", me.id).eq("platform", "instagram").neq("day", todayKST());
       }
       const up = await db.from("participants").update({ ig_username: name }).eq("id", me.id);
       if (up.error) return json({ error: "저장 실패: " + up.error.message }, 500);
