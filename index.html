@@ -804,6 +804,10 @@ function adminView(){
         (p.intent === 'join' ? '입금 ' + won(d + (se.rejoin_fee || 0)) : '반환 ' + won(total - d)) + '</td></tr>'; }).join('') + '</table>' +
     '<p class="hint">입금 = 부족한 보증금 + 재참가비, 반환 = 남은 보증금이에요. 미응답은 반환으로 처리돼요.' + (unsettled ? ' 아직 확정되지 않은 주가 있어 금액이 바뀔 수 있어요.' : '') + '</p></details></div>';
 
+  h += '<div class="panel"><details id="disc"><summary>공개 수치 조회 시험</summary><p class="hint" style="margin-top:0">연결 없이 아이디만으로 다른 프로페셔널 계정의 수치가 조회되는지 확인해요.</p>' +
+    '<div class="row2"><input class="field" id="dname" data-keep placeholder="인스타그램 아이디" autocapitalize="off" autocomplete="off"></div>' +
+    '<button class="btn sm" data-act="a-disc">조회해 보기</button><pre id="dout" style="font-size:12px;white-space:pre-wrap;word-break:break-all;margin-top:10px">' + esc(ui.discOut || '') + '</pre></details></div>';
+
   h += '<div class="panel"><h2>참가자 <small>' + A.participants.length + '명</small></h2>' + A.participants.map(function(p){
     var o = ui.aOpen && ui.aOpen.id === p.id ? ui.aOpen.mode : null;
     var b = '<div class="pline"><div class="r1"><b>' + esc(p.name) + '</b>' + (p.is_admin ? '<span class="tag t">운영자</span>' : '') + (p.has_pin ? '' : '<span class="tag soft">PIN 초기화됨</span>') + '</div>' +
@@ -999,6 +1003,15 @@ document.addEventListener('click', function(ev){
   else if (a === 'a-final') run(async function(){ await rpc('admin_finalize', { p_token:token, p_season_id:ui.AD.season.id, p_week_no:Number(b.dataset.w) }); toast(b.dataset.w + '주차 정산을 확정했어요.'); });
   else if (a === 'a-unfinal') run(async function(){ await rpc('admin_unfinalize', { p_token:token, p_season_id:ui.AD.season.id, p_week_no:Number(b.dataset.w) }); toast('확정을 풀었어요. 현재 인증 기준으로 다시 계산돼요.'); });
   else if (a === 'a-csv') csv();
+  else if (a === 'a-disc') (async function(){
+    ui.discOut = '조회 중…'; render();
+    try {
+      var r = await fetch(CFG.url + '/functions/v1/social/discover', { method:'POST', headers:{ 'content-type':'application/json' },
+        body: JSON.stringify({ token:token, username:val('dname') }) });
+      ui.discOut = JSON.stringify(await r.json(), null, 2);
+    } catch(e){ ui.discOut = '요청하지 못했어요: ' + (e && e.message || e); }
+    render();
+  })();
   else if (a === 'a-rejoin') run(async function(){
     await rpc('admin_set_rejoin', { p_token:token, p_season_id:ui.AD.season.id, p_from:val('rjfrom') || null, p_until:val('rjuntil') || null,
       p_fee:Number(val('rjfee')) || 0, p_pay_info:val('rjpay') || null, p_pay_due:val('rjdue') || null, p_refund_on:val('rjrefund') || null });

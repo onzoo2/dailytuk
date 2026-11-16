@@ -57,9 +57,45 @@ async function syncInstagram(acc) {
   }
 }
 
+const CORS = { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type", "access-control-allow-methods": "POST, OPTIONS" };
+function json(body, status) {
+  return new Response(JSON.stringify(body), { status: status || 200, headers: { ...CORS, "content-type": "application/json" } });
+}
+
 Deno.serve(async (req) => {
   const url = new URL(req.url);
   const path = url.pathname.replace(/^.*\/social/, "");
+  if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
+
+  // 0) 시험용: 로그인 없이 다른 프로페셔널 계정의 공개 수치 조회 (운영자만)
+  if (path.startsWith("/discover")) {
+    try {
+      const body = await req.json().catch(() => ({}));
+      const { data: ses } = await db.from("sessions").select("participant_id, expires_at").eq("token", body.token || "").maybeSingle();
+      if (!ses || new Date(ses.expires_at).getTime() < Date.now()) return json({ error: "로그인이 만료됐어요. 다시 로그인해 주세요." }, 401);
+      const { data: me } = await db.from("participants").select("is_admin").eq("id", ses.participant_id).maybeSingle();
+      if (!me || !me.is_admin) return json({ error: "운영자만 쓸 수 있어요." }, 403);
+      const { data: acc } = await db.from("social_accounts").select("*").eq("participant_id", ses.participant_id).eq("platform", "instagram").maybeSingle();
+      if (!acc) return json({ error: "먼저 운영자 본인의 인스타그램을 연결해 주세요." }, 400);
+      const name = String(body.username || "").trim().replace(/^@/, "");
+      if (!/^[A-Za-z0-9._]{1,30}$/.test(name)) return json({ error: "인스타그램 아이디를 다시 확인해 주세요." }, 400);
+      const tries = [
+        "username,followers_count,media_count,media.limit(5){permalink,timestamp,media_type,media_product_type,like_count,comments_count,view_count}",
+        "username,followers_count,media_count,media.limit(5){permalink,timestamp,media_type,like_count,comments_count}",
+        "username,followers_count,media_count",
+      ];
+      const errors = [];
+      for (const f of tries) {
+        try {
+          const r = await graph("/" + acc.account_id + "?fields=" + encodeURIComponent("business_discovery.username(" + name + "){" + f + "}"), acc.access_token);
+          return json({ ok: true, fields: f, result: r.business_discovery || r, earlier_errors: errors });
+        } catch (e) { errors.push(String(e && e.message || e)); }
+      }
+      return json({ error: "조회하지 못했어요.", details: errors });
+    } catch (e) {
+      return json({ error: "서버 오류: " + String(e && e.message || e) }, 500);
+    }
+  }
 
   // 1) 인스타그램 연결 후 Meta가 되돌려 보내는 주소
   if (path.startsWith("/instagram")) {
