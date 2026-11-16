@@ -198,6 +198,45 @@ create table if not exists public.season_intents (
   primary key (participant_id, season_id)
 );
 
+-- 계정 연결(인스타그램·스레드)과 성과 수집. 이 표들은 서버 함수(Edge Function)만 읽고 씁니다.
+create table if not exists public.social_accounts (
+  participant_id uuid not null references public.participants(id) on delete cascade,
+  platform       text not null check (platform in ('instagram', 'threads')),
+  account_id     text not null,
+  username       text,
+  bio            text,
+  access_token   text not null,           -- 화면으로는 절대 내려보내지 않음
+  connected_at   timestamptz not null default now(),
+  last_sync_at   timestamptz,
+  last_error     text,
+  primary key (participant_id, platform)
+);
+create table if not exists public.connect_states (
+  state          text primary key,
+  participant_id uuid not null references public.participants(id) on delete cascade,
+  platform       text not null,
+  created_at     timestamptz not null default now()
+);
+create table if not exists public.follower_snapshots (
+  participant_id uuid not null references public.participants(id) on delete cascade,
+  platform       text not null,
+  day            date not null,
+  followers      int  not null,
+  primary key (participant_id, platform, day)
+);
+create table if not exists public.media_metrics (
+  participant_id uuid not null references public.participants(id) on delete cascade,
+  platform       text not null,
+  media_id       text not null,
+  permalink      text,
+  caption        text,
+  media_type     text,
+  posted_at      timestamptz,
+  metrics        jsonb not null default '{}'::jsonb,
+  fetched_at     timestamptz not null default now(),
+  primary key (platform, media_id)
+);
+
 insert into public.seasons (number, starts_on, ends_on)
 values (2, '2026-11-29', '2026-12-26')
 on conflict (number) do nothing;
@@ -488,6 +527,43 @@ begin
     raise exception '각 항목은 100자 안으로 적어 주세요.';
   end if;
   update participants set account_intro = v_i, account_target = v_t, account_value = v_v where id = me.id;
+end $$;
+
+-- 계정 연결 시작: 일회용 확인값(state)을 발급
+create or replace function public.start_connect(p_token text, p_platform text) returns text
+language plpgsql security definer set search_path = public, extensions as $$
+declare me participants; v text := encode(gen_random_bytes(18), 'hex');
+begin
+  me := _auth(p_token);
+  if p_platform not in ('instagram', 'threads') then raise exception '연결할 수 없는 서비스예요.'; end if;
+  delete from connect_states where participant_id = me.id or created_at < now() - interval '1 hour';
+  insert into connect_states (state, participant_id, platform) values (v, me.id, p_platform);
+  return v;
+end $$;
+
+-- 내 연결 상태 (토큰은 돌려주지 않음)
+create or replace function public.my_social(p_token text) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me participants;
+begin
+  me := _auth(p_token);
+  return (select coalesce(json_agg(json_build_object('platform', a.platform, 'username', a.username,
+            'connected_at', a.connected_at, 'last_sync_at', a.last_sync_at, 'last_error', a.last_error,
+            'followers', (select f.followers from follower_snapshots f
+                          where f.participant_id = a.participant_id and f.platform = a.platform order by f.day desc limit 1),
+            'media', (select count(*) from media_metrics m where m.participant_id = a.participant_id and m.platform = a.platform))
+          order by a.platform), '[]'::json)
+          from social_accounts a where a.participant_id = me.id);
+end $$;
+
+create or replace function public.disconnect_social(p_token text, p_platform text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me participants;
+begin
+  me := _auth(p_token);
+  delete from social_accounts    where participant_id = me.id and platform = p_platform;
+  delete from follower_snapshots where participant_id = me.id and platform = p_platform;
+  delete from media_metrics      where participant_id = me.id and platform = p_platform;
 end $$;
 
 create or replace function public.logout(p_token text) returns void
@@ -828,6 +904,12 @@ alter table public.sessions           enable row level security;
 alter table public.weekly_settlements enable row level security;
 alter table public.settlement_lines   enable row level security;
 alter table public.season_intents     enable row level security;
+alter table public.social_accounts    enable row level security;
+alter table public.connect_states     enable row level security;
+alter table public.follower_snapshots enable row level security;
+alter table public.media_metrics      enable row level security;
+revoke all on public.social_accounts, public.connect_states, public.follower_snapshots, public.media_metrics from anon, authenticated;
+grant all on public.social_accounts, public.connect_states, public.follower_snapshots, public.media_metrics to service_role;
 
 revoke all on public.participants, public.seasons, public.enrollments, public.posts, public.cheers,
   public.sessions, public.weekly_settlements, public.settlement_lines, public.season_intents from anon, authenticated;
@@ -840,7 +922,7 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and (p.proname like '\_%' or p.proname like 'admin\_%'
-           or p.proname in ('name_status','register','login','logout','set_avatar','set_rejoin','set_account_info','enroll','add_post','update_post',
+           or p.proname in ('name_status','register','login','logout','set_avatar','set_rejoin','set_account_info','start_connect','my_social','disconnect_social','enroll','add_post','update_post',
                             'delete_post','toggle_cheer','get_state','get_profile'))
   loop
     if f.proname like '\_%' then

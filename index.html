@@ -244,6 +244,8 @@ var TYPES = { instagram_reels:'인스타 릴스', instagram_post:'인스타 게�
   youtube_shorts:'유튜브 쇼츠', newsletter:'뉴스레터', blog:'블로그', brunch:'브런치', other:'기타' };
 var TYPE_KEYS = Object.keys(TYPES);
 var LEVELS = [ {n:'Starter',at:0}, {n:'First Tuk',at:1}, {n:'Warm-up',at:10}, {n:'Publisher',at:20}, {n:'Builder',at:60}, {n:'Creator',at:120} ];
+var IG_LOGIN = 'https://www.facebook.com/dialog/oauth?client_id=1970427467722329&config_id=1011546497935518&override_default_response_type=true' +
+  '&redirect_uri=' + encodeURIComponent((CFG.url || '') + '/functions/v1/social/instagram') + '&response_type=code&state=';
 var DEMO_MSG = '데모 모드에서는 저장되지 않아요. config.js에 키를 넣으면 실제로 동작해요.';
 
 /* 캐릭터: '도형-색' (예: '3-5'). 표정은 진행 상태에 따라 바뀐다 */
@@ -690,6 +692,16 @@ function profileView(){
     (p.target ? '<p class="hint" style="margin-top:6px"><b>타겟</b> · ' + esc(p.target) + '</p>' : '') +
     (p.value ? '<p class="hint" style="margin-top:4px"><b>가치</b> · ' + esc(p.value) + '</p>' : '') +
     (!hasInfo ? '<p class="hint" style="margin-top:0">한 줄 소개, 타겟, 가치를 적어 둘 수 있어요. (선택)</p>' : '') + '</div>';
+  if (mine && ui.social){
+    var ig = ui.social.filter(function(x){ return x.platform === 'instagram'; })[0];
+    h += '<div class="panel"><h2>계정 연결<small>나에게만 보여요</small></h2>' + (ig
+      ? '<p style="font-size:15px;font-weight:600">인스타그램 @' + esc(ig.username || '') + '</p>' +
+        '<p class="hint num" style="margin-top:4px">' + (ig.followers != null ? '팔로워 ' + Number(ig.followers).toLocaleString('ko-KR') + '명 · ' : '') + '게시물 ' + ig.media + '개 수집됨</p>' +
+        (ig.last_error ? '<p class="hint">최근 수집에 문제가 있었어요: ' + esc(ig.last_error) + '</p>' : '') +
+        '<button class="link" data-act="soc-off" data-p="instagram" data-confirm="한 번 더 누르면 연결이 해제되고 수집한 기록이 지워져요">연결 해제</button>'
+      : '<p class="hint" style="margin-top:0">인스타그램을 연결하면 팔로워 변화와 게시물 반응을 자동으로 모아 드려요. 읽기만 하고, 글을 올리거나 메시지를 보내지 않아요.</p>' +
+        '<button class="btn" data-act="soc-on" data-p="instagram">인스타그램 연결하기</button><p class="hint">프로페셔널(비즈니스·크리에이터) 계정만 연결할 수 있어요.</p>') + '</div>';
+  }
   if (mine && ui.avEdit) h += '<div class="panel"><h2>내 캐릭터<button class="link" data-act="av-cancel">취소</button></h2>' + picker() + '<button class="btn" data-act="av-save">이 캐릭터로 저장</button></div>';
   h += '<div class="panel"><h2>주간 달성 기록</h2>' + (p.seasons.length ? p.seasons.map(function(s){
     return '<div class="strip"><b>' + s.number + '기</b><span class="tiles">' + s.weeks.map(function(w){
@@ -835,7 +847,12 @@ async function load(){
     st._at = Date.now(); S = st; ui.loadError = '';
     if (st.expired && token){ setToken(null); toast('로그인이 만료됐어요. 다시 로그인해 주세요.'); }
     if (view.name === 'admin' && !(S.me && S.me.is_admin)) view = { name:'home' };
-    if (view.name === 'profile') ui.prof = await rpc('get_profile', { p_participant: view.id });
+    if (ui.backToMine){ ui.backToMine = false; if (S.me){ view = { name:'profile', id:S.me.id }; ui.fSeason = 'all'; } }
+    if (view.name === 'profile'){
+      ui.prof = await rpc('get_profile', { p_participant: view.id });
+      ui.social = null;
+      if (LIVE && token && S.me && S.me.id === view.id){ try { ui.social = await rpc('my_social', { p_token: token }); } catch(e){} }
+    }
     if (view.name === 'admin') ui.AD = await rpc('admin_data', { p_token: token, p_season_id: ui.aSeason });
   } catch(e){
     if (!S) ui.loadError = e.message + ' 화면을 새로고침해 보세요.'; else toast(e.message);
@@ -850,7 +867,13 @@ async function run(fn){
 function route(){
   var h = location.hash.replace(/^#/, '');
   ui.edit = null; ui.fType = null;
-  if (h.indexOf('p/') === 0){ view = { name:'profile', id:h.slice(2) }; ui.prof = null; ui.fSeason = 'all'; }
+  if (h.indexOf('social/') === 0){                       // 계정 연결을 마치고 돌아온 경우
+    var parts = h.split('/'), m = decodeURIComponent(parts.slice(2).join('/') || '');
+    toast(parts[1] === 'ok' ? (m === 'instagram' ? '인스타그램을 연결했어요.' : m) : '연결하지 못했어요. ' + m);
+    ui.backToMine = true; view = { name:'home' };
+    try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
+  }
+  else if (h.indexOf('p/') === 0){ view = { name:'profile', id:h.slice(2) }; ui.prof = null; ui.fSeason = 'all'; }
   else if (h === 'admin'){ view = { name:'admin' }; }
   else if (h === 'guide'){ view = { name:'guide' }; }
   else view = { name:'home' };
@@ -914,6 +937,13 @@ document.addEventListener('click', function(ev){
     await rpc('set_rejoin', { p_token:token, p_answer: a === 'rj-join' ? 'join' : 'leave' }); ui.rjSeen = true;
     toast(a === 'rj-join' ? '계속 함께해요. 입금 안내를 확인해 주세요.' : '응답을 저장했어요. 이번 시즌 끝까지 응원할게요.');
   });
+
+  /* 계정 연결 */
+  else if (a === 'soc-on') run(async function(){
+    var st = await rpc('start_connect', { p_token:token, p_platform:b.dataset.p });
+    location.href = IG_LOGIN + encodeURIComponent(st);
+  });
+  else if (a === 'soc-off') run(async function(){ await rpc('disconnect_social', { p_token:token, p_platform:b.dataset.p }); toast('연결을 해제했어요.'); });
 
   /* 계정 소개 */
   else if (a === 'info-edit'){ ui.infoEdit = true; render(); }
