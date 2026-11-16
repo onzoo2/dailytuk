@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>매일툭챌린지</title>
+<meta name="description" content="각자의 목표만큼, 꾸준히 툭. 콘텐츠 발행 챌린지">
+<meta name="theme-color" content="#FBF7F2">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --bg:#FBF7F2; --card:#FFFFFF; --ink:#352F2B; --muted:#8F857D; --line:#ECE4DB;
+    --peach:#F5BFA0; --peach-soft:#FCEBDF; --sage:#C3DBC5; --sage-ink:#4E7355;
+    --r:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--ink);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.5;word-break:keep-all;padding:0 16px calc(48px + env(safe-area-inset-bottom));}
+  main{max-width:480px;margin:0 auto}
+  button,input,select{font:inherit;color:inherit}
+  button{cursor:pointer;border:0;background:none}
+  a{color:inherit}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* 상단 */
+  header{padding:28px 4px 18px}
+  .brand{font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+  .dday{display:flex;align-items:baseline;gap:10px;margin-top:6px}
+  .dday b{font-size:44px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+  .dday span{font-size:14px;color:var(--muted)}
+  .track{height:6px;border-radius:99px;background:var(--line);margin-top:14px;overflow:hidden}
+  .track i{display:block;height:100%;border-radius:99px;background:var(--peach);transition:width .6s ease}
+  .demo{display:inline-block;margin-top:12px;font-size:12px;padding:4px 10px;border-radius:99px;background:var(--peach-soft)}
+
+  /* 통계 */
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+  .stat small{display:block;font-size:12px;color:var(--muted)}
+  .stat b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em;margin-top:2px}
+  .stat em{font-style:normal;font-size:12px;color:var(--muted)}
+
+  /* 인증 / 등록 */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:14px}
+  .panel h2{font-size:16px;font-weight:700;margin-bottom:12px}
+  .field{width:100%;height:50px;border:1px solid var(--line);border-radius:14px;padding:0 14px;background:var(--bg);font-size:16px;outline:none}
+  .field:focus{border-color:var(--peach);background:#fff}
+  .btn{width:100%;height:54px;border-radius:14px;background:var(--ink);color:#fff;font-size:16px;font-weight:700;margin-top:10px;transition:transform .08s, opacity .2s}
+  .btn:active{transform:scale(.985)}
+  .btn[disabled]{background:var(--line);color:var(--muted);cursor:default}
+  .btn.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line);height:46px;font-size:14px;font-weight:600}
+  .btn.small{height:40px;font-size:14px;margin-top:8px}
+  .done{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--sage-ink);background:#EEF5EE;border-radius:12px;padding:10px 12px;margin-bottom:10px}
+  .hint{font-size:13px;color:var(--muted);margin-top:8px}
+  .msg{font-size:14px;background:var(--peach-soft);border-radius:12px;padding:10px 12px;margin-top:10px}
+  .msg:empty{display:none}
+  .chips{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+  .chip{height:44px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-weight:600}
+  .chip[aria-pressed="true"]{background:var(--peach);border-color:var(--peach)}
+  .label{font-size:13px;color:var(--muted);margin-top:14px}
+  details.re{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+  details summary{cursor:pointer;font-size:14px;font-weight:600;list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::after{content:"＋";float:right;color:var(--muted);font-weight:400}
+  details[open] summary::after{content:"－"}
+  details.re .field{margin-top:10px}
+
+  /* 참가자 카드 */
+  .listhead{display:flex;justify-content:space-between;align-items:baseline;padding:10px 4px 8px}
+  .listhead h2{font-size:16px;font-weight:700}
+  .listhead span{font-size:13px;color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:10px}
+  .card.me{border:2px solid var(--peach);box-shadow:0 6px 20px rgba(245,191,160,.25)}
+  .top{display:flex;align-items:center;gap:12px}
+  .jar{flex:none;width:44px;height:52px;border-radius:10px 10px 16px 16px;border:2px solid var(--ink);position:relative;overflow:hidden;background:#fff}
+  .jar i{position:absolute;left:0;right:0;bottom:0;background:var(--peach);transition:height .8s cubic-bezier(.2,.8,.2,1)}
+  .jar.full i{background:var(--sage)}
+  .jar span{position:absolute;inset:0;display:grid;place-items:center;font-size:11px;font-weight:700}
+  .who{flex:1;min-width:0}
+  .who h3{font-size:16px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .who h3 span.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .badge{flex:none;font-size:11px;font-weight:700;background:var(--peach);border-radius:99px;padding:1px 8px}
+  .who p{font-size:12px;color:var(--muted)}
+  .money{text-align:right;flex:none}
+  .money small{display:block;font-size:11px;color:var(--muted)}
+  .money b{font-size:16px;font-weight:700;letter-spacing:-.02em}
+  .weeks{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:14px}
+  .wk{display:flex;align-items:center;gap:8px;min-height:22px}
+  .wk > span{flex:none;font-size:12px;color:var(--muted);width:24px}
+  .wk.cur > span{color:var(--ink);font-weight:700}
+  .dots{display:flex;gap:4px;flex-wrap:wrap}
+  .dots i{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--line);background:transparent}
+  .wk.open .dots i{border-color:#D9CFC4}
+  .dots i.on{background:var(--peach);border-color:var(--peach)}
+  .wk.ok .dots i.on{background:var(--sage);border-color:var(--sage)}
+  .wk em{font-style:normal;font-size:11px;font-weight:700;color:var(--sage-ink)}
+  .wk em.plus{color:var(--muted);font-weight:600}
+  details.links{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  details.links summary{font-size:13px;color:var(--muted);font-weight:500}
+  .links ul{list-style:none;margin-top:8px}
+  .links li{display:flex;gap:10px;align-items:center;font-size:14px;padding:6px 0}
+  .links li span{flex:none;width:40px;font-size:12px;color:var(--muted)}
+  .links li a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-underline-offset:3px}
+  .links li button{flex:none;font-size:12px;color:var(--muted);text-decoration:underline;padding:4px}
+  .empty{text-align:center;color:var(--muted);font-size:14px;padding:28px 0}
+  footer{text-align:center;font-size:12px;color:var(--muted);padding:22px 0 0}
+  footer button{font-size:12px;color:var(--muted);text-decoration:underline;padding:6px}
+
+  /* 운영자 */
+  .admin h2{display:flex;justify-content:space-between;align-items:center}
+  .admin .row{display:flex;gap:8px;margin-top:8px}
+  .admin .row > *{flex:1;min-width:0}
+  .admin .field{height:44px;font-size:15px}
+  .admin .row .btn{margin-top:0;flex:none;width:auto;padding:0 16px;height:44px;font-size:14px}
+  .admin h4{font-size:13px;color:var(--muted);font-weight:600;margin-top:18px}
+  .linkout{font-size:12px;word-break:break-all;background:var(--bg);border-radius:10px;padding:10px;margin-top:8px}
+  .linkout:empty{display:none}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header id="head"></header>
+  <section class="stats" id="stats"></section>
+  <section id="action"></section>
+  <section id="admin"></section>
+  <div class="listhead"><h2>함께하는 사람들</h2><span id="weekinfo"></span></div>
+  <section id="list"><p class="empty">불러오는 중…</p></section>
+  <footer id="foot"></footer>
+</main>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+'use strict';
+
+/* ───────── 기본 설정 ───────── */
+var NAME = '매일툭챌린지';
+var WEEK_DEPOSIT = 30000;                       // 주당 보증금
+var CFG = window.CHALLENGE_CONFIG || {};
+var LIVE = !!(CFG.url && CFG.anonKey && window.supabase && window.supabase.createClient);
+var db = null;
+try { if (LIVE) db = window.supabase.createClient(CFG.url, CFG.anonKey); } catch(e){ LIVE = false; }
+var STORE = 'maeiltuk.me';
+var params = new URLSearchParams(location.search);
+var ADMIN_MODE = params.has('admin');
+
+var state = {
+  info: { start:'2026-11-29', end:'2026-12-26', today: todayKST() },
+  people: [], me: null, loaded: false,
+  goalPick: 3, adminPw: null, adminSel: null, msg: '', busy: false, loadError: ''
+};
+
+/* ───────── 작은 도구들 ───────── */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function todayKST(){ return new Date(Date.now() + 9*3600e3).toISOString().slice(0,10); }
+function dnum(s){ var a = String(s).slice(0,10).split('-').map(Number); return Math.round(Date.UTC(a[0], a[1]-1, a[2]) / 864e5); }
+function dstr(n){ return new Date(n*864e5).toISOString().slice(0,10); }
+function md(s){ var a = String(s).slice(0,10).split('-'); return Number(a[1]) + '.' + Number(a[2]); }
+function mdK(s){ var a = String(s).slice(0,10).split('-'); return Number(a[1]) + '월 ' + Number(a[2]) + '일'; }
+function won(n){ return Math.round(n).toLocaleString('ko-KR') + '원'; }
+function host(u){ try { return new URL(u).hostname.replace(/^www\./,''); } catch(e){ return '링크'; } }
+function safeUrl(u){ return /^https?:\/\//i.test(u || '') ? u : ''; }
+function saveMe(me){ state.me = me; try { localStorage.setItem(STORE, JSON.stringify(me)); } catch(e){} }
+function loadMe(){ try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch(e){ return null; } }
+function clearMe(){ state.me = null; try { localStorage.removeItem(STORE); } catch(e){} }
+
+/* ───────── 서버 통신 (키가 없으면 데모) ───────── */
+function friendly(m){
+  m = String(m || '');
+  if (/fetch|network|load failed|timeout/i.test(m)) return '연결이 불안정해요. 인터넷을 확인하고 다시 눌러 주세요.';
+  if (/[가-힣]/.test(m)) return m;
+  return '문제가 생겼어요. 새로고침 후 다시 시도해 주세요. 계속되면 운영자에게 이 문구를 보내 주세요: ' + m;
+}
+async function rpc(name, args){
+  if (!LIVE) return demoRpc(name, args || {});
+  var res;
+  try { res = await db.rpc(name, args || {}); }
+  catch(e){ throw new Error(friendly(e && e.message || 'network')); }
+  if (res.error) throw new Error(friendly(res.error.message));
+  return res.data;
+}
+async function fetchBoard(){
+  if (!LIVE) return JSON.parse(JSON.stringify(demo.people));
+  var res;
+  try { res = await db.from('board').select('*'); }
+  catch(e){ throw new Error(friendly('network')); }
+  if (res.error) throw new Error(friendly(res.error.message));
+  return res.data || [];
+}
+
+/* ───────── 데모 데이터 ───────── */
+var demo = (function(){
+  var start = '2026-11-29', s = dnum(start), today = dstr(s + 9), seq = 1;
+  function mk(name, goal, offs){
+    return { id:'demo-' + name, name:name, goal:goal, created_at:start, token:'demo-token-' + name,
+      days: offs.map(function(o){ return { id: seq++, day: dstr(s + o), url:'https://example.com/' + encodeURIComponent(name) + '/' + o }; }) };
+  }
+  return { info:{ start:start, end:dstr(s + 27), today:today }, pw:'demo', people:[
+    mk('온주', 3, [0,2,4,7,9]), mk('하루', 5, [0,1,2,3,5,7,8]), mk('모아', 1, [3]),
+    mk('단비', 2, [1,8]), mk('여름', 7, [0,1,2,3,4,5,6,7,8,9]), mk('솔', 3, [2,5,6,8])
+  ]};
+})();
+function demoRpc(name, a){
+  var P = demo.people;
+  function pub(p){ return { id:p.id, name:p.name, token:p.token }; }
+  function norm(t){ return String(t || '').replace(/\s/g,'').toLowerCase(); }
+  function admin(){ if (a.p_password !== demo.pw) throw new Error('관리자 비밀번호가 맞지 않아요. (데모 모드 비밀번호: demo)'); }
+  function byId(id){ return P.filter(function(p){ return p.id === id; })[0]; }
+  var p;
+  switch(name){
+    case 'get_info': return demo.info;
+    case 'join_challenge':
+      var nm = String(a.p_name || '').trim();
+      if (!nm || nm.length > 12) throw new Error('닉네임은 1~12자로 적어 주세요.');
+      if (P.some(function(x){ return norm(x.name) === norm(nm); })) throw new Error('이미 있는 닉네임이에요. 본인이라면 아래 "이미 등록했어요"를 눌러 다시 연결해 주세요.');
+      p = { id:'demo-' + Date.now(), name:nm, goal:a.p_goal || 3, created_at:demo.info.today, token:'demo-token-' + Date.now(), days:[] };
+      P.push(p); return pub(p);
+    case 'whoami':
+      p = P.filter(function(x){ return x.token === a.p_token; })[0];
+      if (!p) throw new Error('연결 정보를 찾지 못했어요. "이미 등록했어요"에서 닉네임으로 다시 연결해 주세요.');
+      return pub(p);
+    case 'relink_by_name':
+      p = P.filter(function(x){ return norm(x.name) === norm(a.p_name); })[0];
+      if (!p) throw new Error('그 닉네임으로 등록된 기록이 없어요. 철자를 확인하거나 운영자에게 연결 링크를 요청해 주세요.');
+      return pub(p);
+    case 'check_in':
+      p = P.filter(function(x){ return x.token === a.p_token; })[0];
+      if (!p) throw new Error('연결 정보를 찾지 못했어요. "이미 등록했어요"에서 닉네임으로 다시 연결해 주세요.');
+      if (!/^https?:\/\/\S+$/i.test(a.p_url || '')) throw new Error('링크를 확인해 주세요. https:// 로 시작하는 게시물 주소를 붙여넣으면 돼요.');
+      if (p.days.some(function(d){ return d.url === a.p_url; })) throw new Error('이미 인증한 링크예요. 새로 발행한 콘텐츠의 링크를 넣어 주세요.');
+      p.days.push({ id:Date.now(), day:demo.info.today, url:a.p_url }); return { day:demo.info.today };
+    case 'is_admin': return a.p_password === demo.pw;
+    case 'admin_set_day': admin(); byId(a.p_participant).days.push({ id:Date.now(), day:a.p_day, url:a.p_url || null }); return null;
+    case 'admin_remove_checkin': admin(); P.forEach(function(x){ x.days = x.days.filter(function(d){ return d.id !== a.p_checkin; }); }); return null;
+    case 'admin_set_goal': admin(); byId(a.p_participant).goal = a.p_goal; return null;
+    case 'admin_remove': admin(); demo.people = P.filter(function(x){ return x.id !== a.p_participant; }); return null;
+    case 'admin_get_token': admin(); return pub(byId(a.p_participant));
+    case 'admin_set_start': admin(); demo.info.start = a.p_start; demo.info.end = dstr(dnum(a.p_start) + 27); return null;
+  }
+  return null;
+}
+
+/* ───────── 계산: 주차·환급·상금 ───────── */
+function compute(){
+  var info = state.info, s = dnum(info.start), t = dnum(info.today);
+  var total = dnum(info.end) - s + 1, weeks = Math.max(1, Math.ceil(total / 7));
+  var idx = t - s;
+  var phase = idx < 0 ? 'before' : (idx >= total ? 'after' : 'during');
+  var curWeek = phase === 'during' ? Math.floor(idx / 7) : -1;
+  var closed = phase === 'before' ? 0 : (phase === 'after' ? weeks : curWeek);   // 마감된 주 수
+  var people = state.people;
+
+  people.forEach(function(p){
+    p.goal = Math.min(7, Math.max(1, Number(p.goal) || 1));
+    p.days = (p.days || []).slice().sort(function(a,b){ return a.day < b.day ? -1 : a.day > b.day ? 1 : 0; });
+    p.wk = []; p.bonus = [];
+    for (var w = 0; w < weeks; w++){ p.wk.push(0); p.bonus.push(0); }
+    p.days.forEach(function(c){ var w = Math.floor((dnum(c.day) - s) / 7); if (w >= 0 && w < weeks) p.wk[w]++; });
+    p.refund = p.wk.map(function(n){ return Math.round(WEEK_DEPOSIT * Math.min(n, p.goal) / p.goal); });
+    p.todayCount = p.days.filter(function(c){ return String(c.day).slice(0,10) === info.today; }).length;
+  });
+
+  var pots = [];
+  for (var w = 0; w < closed; w++){
+    var pot = 0, winners = [];
+    people.forEach(function(p){ pot += WEEK_DEPOSIT - p.refund[w]; if (p.wk[w] >= p.goal) winners.push(p); });
+    var share = winners.length ? Math.floor(pot / winners.length) : 0;
+    winners.forEach(function(p){ p.bonus[w] = share; });
+    pots.push({ pot:pot, winners:winners.length, share:share });
+  }
+  people.forEach(function(p){
+    var done = 0, r = 0, b = 0;
+    for (var w = 0; w < weeks; w++){ done += Math.min(p.wk[w], p.goal); r += p.refund[w]; b += p.bonus[w]; }
+    p.pct = done / (p.goal * weeks); p.rsum = r; p.bsum = b;
+  });
+  return { s:s, total:total, weeks:weeks, idx:idx, phase:phase, curWeek:curWeek, closed:closed, pots:pots,
+    kept: people.reduce(function(a,p){ return a + p.refund.reduce(function(x,y){ return x+y; }, 0); }, 0),
+    curDone: curWeek >= 0 ? people.filter(function(p){ return p.wk[curWeek] >= p.goal; }).length : 0 };
+}
+
+/* ───────── 화면 그리기 ───────── */
+function render(){
+  var c = compute(), info = state.info, n = state.people.length;
+
+  // 상단
+  var big, sub, pct;
+  if (c.phase === 'before'){ big = 'D-' + (-c.idx); sub = mdK(info.start) + '에 시작해요'; pct = 0; }
+  else if (c.phase === 'during'){ big = 'Day ' + (c.idx + 1); sub = c.total + '일 중 · ' + (c.curWeek + 1) + '주차'; pct = (c.idx + 1) / c.total * 100; }
+  else { big = '완주'; sub = c.total + '일의 여정을 마쳤어요'; pct = 100; }
+  $('head').innerHTML =
+    '<div class="brand">' + NAME + ' · ' + md(info.start) + ' – ' + md(info.end) + '</div>' +
+    '<div class="dday"><b class="num">' + big + '</b><span>' + sub + '</span></div>' +
+    '<div class="track"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+    (LIVE ? '' : '<span class="demo">데모 모드 · 예시 데이터예요</span>');
+
+  // 통계
+  var last = c.pots.length ? c.pots[c.pots.length - 1] : null;
+  var bonus = !last ? '<b>—</b><em>첫 주 마감 후 공개</em>'
+    : (last.winners ? '<b class="num">+' + won(last.share) + '</b><em>' + c.pots.length + '주차 달성 ' + last.winners + '명</em>'
+                    : '<b>—</b><em>' + c.pots.length + '주차 달성자 없음</em>');
+  $('stats').innerHTML =
+    '<div class="stat"><small>참가</small><b class="num">' + n + '명</b>' +
+      (c.curWeek >= 0 ? '<em>이번 주 달성 ' + c.curDone + '명</em>' : '<em>&nbsp;</em>') + '</div>' +
+    '<div class="stat"><small>보증금 총액</small><b class="num">' + won(n * WEEK_DEPOSIT * c.weeks) + '</b><em>1인 ' + won(WEEK_DEPOSIT * c.weeks) + '</em></div>' +
+    '<div class="stat"><small>지켜낸 보증금</small><b class="num">' + won(c.kept) + '</b><em>발행으로 확보한 금액</em></div>' +
+    '<div class="stat"><small>주간 리워드 (1인당)</small>' + bonus + '</div>';
+
+  renderAction(c);
+  renderAdmin(c);
+
+  // 목록
+  $('weekinfo').textContent = c.curWeek >= 0 ? (c.curWeek + 1) + '주차 진행 중' : '';
+  var meId = state.me && state.me.id;
+  var sorted = state.people.slice().sort(function(a,b){
+    if (a.id === meId) return -1; if (b.id === meId) return 1;
+    return (b.pct - a.pct) || String(a.name).localeCompare(String(b.name), 'ko');
+  });
+  $('list').innerHTML = state.loadError ? '<p class="empty">' + esc(state.loadError) + '</p>'
+    : !state.loaded ? '<p class="empty">불러오는 중…</p>'
+    : sorted.length ? sorted.map(function(p){ return card(p, c, p.id === meId); }).join('')
+    : '<p class="empty">첫 번째 참가자가 되어 주세요.</p>';
+
+  $('foot').innerHTML = state.me
+    ? esc(state.me.name) + ' 님으로 연결됨 · <button data-act="logout">다른 닉네임으로 연결</button>' : '';
+}
+
+function card(p, c, isMe){
+  var pct = Math.round(p.pct * 100);
+  var weeks = '';
+  for (var w = 0; w < c.weeks; w++){
+    var n = p.wk[w], ok = n >= p.goal, dots = '';
+    for (var i = 0; i < p.goal; i++) dots += '<i' + (i < n ? ' class="on"' : '') + '></i>';
+    var cls = 'wk' + (w === c.curWeek ? ' cur' : '') + (ok ? ' ok' : '') + (w >= c.closed ? ' open' : '');
+    weeks += '<div class="' + cls + '"><span>' + (w + 1) + '주</span><div class="dots">' + dots + '</div>' +
+      (ok ? '<em>✓</em>' : '') + (n > p.goal ? '<em class="plus">+' + (n - p.goal) + '</em>' : '') + '</div>';
+  }
+  var adminOn = !!state.adminPw;
+  var links = p.days.slice().reverse().map(function(d){
+    var u = safeUrl(d.url);
+    return '<li><span class="num">' + md(d.day) + '</span>' +
+      (u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(host(u)) + '</a>' : '<a>운영자 확인</a>') +
+      (adminOn ? '<button data-act="a-del" data-id="' + esc(d.id) + '">삭제</button>' : '') + '</li>';
+  }).join('');
+  return '<article class="card' + (isMe ? ' me' : '') + '">' +
+    '<div class="top">' +
+      '<div class="jar' + (pct >= 100 ? ' full' : '') + '" role="img" aria-label="진행도 ' + pct + '%"><i style="height:' + pct + '%"></i><span class="num">' + pct + '%</span></div>' +
+      '<div class="who"><h3><span class="n">' + esc(p.name) + '</span>' + (isMe ? '<span class="badge">나</span>' : '') + '</h3>' +
+        '<p>주 ' + p.goal + '회 · 1개당 ' + won(WEEK_DEPOSIT / p.goal) + '</p></div>' +
+      '<div class="money"><small>종료 후 환급 예상</small><b class="num">' + won(p.rsum) + '</b>' +
+        (p.bsum ? '<small class="num">리워드 +' + won(p.bsum) + '</small>' : '') + '</div>' +
+    '</div>' +
+    '<div class="weeks">' + weeks + '</div>' +
+    (p.days.length ? '<details class="links"><summary>발행한 콘텐츠 ' + p.days.length + '개</summary><ul>' + links + '</ul></details>' : '') +
+  '</article>';
+}
+
+function renderAction(c){
+  var el = $('action'), info = state.info, html = '';
+  var keepUrl = $('url') ? $('url').value : '';
+  var keepName = $('name') ? $('name').value : '';
+  var reOpen = $('re') ? $('re').open : false;
+  var keepRe = $('rename') ? $('rename').value : '';
+
+  if (!state.loaded && !state.loadError){ el.innerHTML = ''; return; }
+
+  if (state.me){
+    var me = state.people.filter(function(p){ return p.id === state.me.id; })[0];
+    var tc = me ? me.todayCount : 0;
+    var left = (me && c.curWeek >= 0) ? Math.max(0, me.goal - me.wk[c.curWeek]) : 0;
+    html += '<div class="panel">';
+    if (c.phase === 'before'){
+      html += '<h2>' + esc(state.me.name) + ' 님, 등록됐어요</h2>' +
+        '<button class="btn" disabled>' + mdK(info.start) + '부터 인증할 수 있어요</button>';
+    } else if (c.phase === 'after'){
+      html += '<h2>' + esc(state.me.name) + ' 님, 수고하셨어요</h2>' +
+        '<button class="btn" disabled>챌린지 기간이 끝났어요</button>';
+    } else {
+      if (tc) html += '<div class="done">오늘 ' + tc + '개 발행 완료 ✓</div>';
+      html += '<input class="field" id="url" type="url" inputmode="url" autocomplete="off" placeholder="발행한 콘텐츠 링크 붙여넣기">' +
+        '<button class="btn" data-act="checkin"' + (state.busy ? ' disabled' : '') + '>' + (tc ? '하나 더 인증하기' : '오늘 발행 인증하기') + '</button>' +
+        '<p class="hint">' + (left ? '이번 주 목표까지 ' + left + '개 남았어요.' : '이번 주 목표를 채웠어요. 멋져요.') + '</p>';
+    }
+    html += '<div class="msg" role="status">' + esc(state.msg) + '</div></div>';
+  } else {
+    var canJoin = c.phase !== 'after';
+    var chips = '';
+    for (var g = 1; g <= 7; g++) chips += '<button class="chip" data-act="goal" data-g="' + g + '" aria-pressed="' + (g === state.goalPick) + '">' + g + '</button>';
+    html += '<div class="panel"><h2>' + (canJoin ? '함께 시작해요' : '이번 기수는 끝났어요') + '</h2>';
+    if (canJoin){
+      html += '<input class="field" id="name" maxlength="12" autocomplete="nickname" placeholder="닉네임">' +
+        '<p class="label">일주일에 몇 번 발행할까요?</p><div class="chips">' + chips + '</div>' +
+        '<p class="hint">주 ' + state.goalPick + '회 · 콘텐츠 1개당 ' + won(WEEK_DEPOSIT / state.goalPick) + '</p>' +
+        '<button class="btn" data-act="join"' + (state.busy ? ' disabled' : '') + '>참가하기</button>';
+    }
+    html += '<div class="msg" role="status">' + esc(state.msg) + '</div>' +
+      '<details class="re" id="re"><summary>이미 등록했어요</summary>' +
+        '<input class="field" id="rename" maxlength="12" autocomplete="nickname" placeholder="등록했던 닉네임">' +
+        '<button class="btn ghost" data-act="relink">다시 연결하기</button>' +
+      '</details></div>';
+  }
+  el.innerHTML = html;
+  if ($('url')) $('url').value = keepUrl;
+  if ($('name')) $('name').value = keepName;
+  if ($('rename')) $('rename').value = keepRe;
+  if ($('re') && (reOpen || state.openRe)) $('re').open = true;
+}
+
+function renderAdmin(c){
+  var el = $('admin');
+  if (!ADMIN_MODE){ el.innerHTML = ''; return; }
+  if (el.dataset.sig === adminSig()) return;         // 입력 중인 값이 지워지지 않게
+  el.dataset.sig = adminSig();
+  if (!state.adminPw){
+    el.innerHTML = '<div class="panel admin"><h2>운영자 모드</h2>' +
+      '<input class="field" id="apw" type="password" autocomplete="current-password" placeholder="관리자 비밀번호">' +
+      '<button class="btn small" data-act="a-login">들어가기</button><div class="msg" id="amsg" role="status"></div></div>';
+    return;
+  }
+  var opts = state.people.map(function(p){
+    return '<option value="' + esc(p.id) + '"' + (p.id === state.adminSel ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('');
+  var sel = state.people.filter(function(p){ return p.id === state.adminSel; })[0];
+  var goals = '';
+  for (var g = 1; g <= 7; g++) goals += '<option value="' + g + '"' + (sel && sel.goal === g ? ' selected' : '') + '>주 ' + g + '회</option>';
+  el.innerHTML = '<div class="panel admin"><h2>운영자 모드 <button data-act="a-logout" style="font-size:12px;color:var(--muted);text-decoration:underline">나가기</button></h2>' +
+    (state.people.length ?
+      '<select class="field" id="asel">' + opts + '</select>' +
+      '<h4>연결 링크 발급</h4><button class="btn ghost small" data-act="a-link">이 참가자의 연결 링크 복사</button><div class="linkout" id="alink"></div>' +
+      '<h4>인증 수동 추가 (삭제는 아래 카드의 목록에서)</h4>' +
+      '<div class="row"><input class="field" id="aday" type="date" value="' + esc(state.info.today) + '"><input class="field" id="aurl" type="url" placeholder="링크 (없어도 됨)"></div>' +
+      '<button class="btn ghost small" data-act="a-add">인증 추가</button>' +
+      '<h4>발행 목표 변경</h4><div class="row"><select class="field" id="agoal">' + goals + '</select><button class="btn" data-act="a-goal">저장</button></div>' +
+      '<h4>참가자 삭제</h4><button class="btn ghost small" data-act="a-remove" id="armv">이 참가자 삭제</button>'
+      : '<p class="hint">아직 참가자가 없어요.</p>') +
+    '<h4>주간 리워드 송금 목록</h4>' + (c.pots.length ? c.pots.map(function(pt, w){
+      var names = state.people.filter(function(p){ return p.bonus[w] > 0 || (pt.winners && p.wk[w] >= p.goal); }).map(function(p){ return esc(p.name); }).join(', ');
+      return '<p class="hint">' + (w + 1) + '주차 · ' + (pt.winners ? names + ' — 각 ' + won(pt.share) : '달성자 없음 (운영비 ' + won(pt.pot) + ')') + '</p>';
+    }).join('') : '<p class="hint">첫 주가 마감되면 여기에 표시돼요.</p>') +
+    '<h4>종료 후 환급 목록</h4>' + (c.phase === 'after'
+      ? state.people.map(function(p){ return '<p class="hint">' + esc(p.name) + ' — ' + won(p.rsum) + '</p>'; }).join('')
+      : '<p class="hint">4주가 끝나면 여기에 표시돼요.</p>') +
+    '<h4>챌린지 시작일 (4주 자동 계산)</h4><div class="row"><input class="field" id="astart" type="date" value="' + esc(state.info.start) + '"><button class="btn" data-act="a-start">저장</button></div>' +
+    '<div class="msg" id="amsg" role="status"></div></div>';
+}
+function adminSig(){
+  return [state.adminPw ? 1 : 0, state.adminSel, state.info.start, state.info.today, state.people.map(function(p){ return p.id + ':' + p.goal + ':' + p.name + ':' + (p.days || []).length; }).join(',')].join('|');
+}
+function amsg(t){ var m = $('amsg'); if (m) m.textContent = t || ''; }
+
+/* ───────── 동작 ───────── */
+async function refresh(){
+  try {
+    var r = await Promise.all([rpc('get_info'), fetchBoard()]);
+    if (r[0] && r[0].start) state.info = { start:r[0].start, end:r[0].end, today:r[0].today || todayKST() };
+    state.people = r[1]; state.loaded = true; state.loadError = '';
+    if (state.adminPw && !state.people.some(function(p){ return p.id === state.adminSel; })) state.adminSel = state.people[0] ? state.people[0].id : null;
+  } catch(e){
+    if (!state.loaded) state.loadError = e.message + ' (화면을 아래로 당겨 새로고침해 보세요.)';
+  }
+  render();
+}
+
+async function act(fn){
+  if (state.busy) return;
+  state.busy = true; state.msg = ''; render();
+  try { await fn(); } catch(e){ state.msg = e.message || friendly(''); }
+  state.busy = false;
+  await refresh();
+}
+
+async function boot(){
+  render();
+  var key = params.get('key');
+  if (key){
+    try {
+      saveMe(await rpc('whoami', { p_token:key }));
+      state.msg = state.me.name + ' 님으로 연결됐어요.';
+    } catch(e){ state.msg = '연결 링크가 맞지 않아요. 아래 "이미 등록했어요"에서 닉네임으로 연결하거나, 운영자에게 링크를 다시 요청해 주세요.'; state.openRe = true; }
+    params.delete('key');
+    var q = params.toString();
+    try { history.replaceState(null, '', location.pathname + (q ? '?' + q.replace(/=$/,'').replace(/=&/g,'&') : '')); } catch(e){}
+  }
+  if (!state.me){
+    var saved = loadMe();
+    if (saved && saved.token){
+      state.me = saved;
+      rpc('whoami', { p_token:saved.token }).then(saveMe).catch(function(e){
+        if (/찾지 못했어요/.test(e.message)){            // 삭제됐거나 초기화된 경우에만 연결 해제
+          clearMe(); state.openRe = true;
+          state.msg = '연결이 풀렸어요. 아래 "이미 등록했어요"에서 닉네임으로 다시 연결해 주세요.'; render();
+        }
+      });
+    }
+  }
+  if (ADMIN_MODE){
+    try { var pw = sessionStorage.getItem('maeiltuk.admin'); if (pw && await rpc('is_admin', { p_password:pw })) state.adminPw = pw; } catch(e){}
+  }
+  await refresh();
+}
+
+document.addEventListener('click', function(ev){
+  var b = ev.target.closest('[data-act]'); if (!b) return;
+  var a = b.dataset.act, pw = state.adminPw, sel = $('asel') ? $('asel').value : state.adminSel;
+
+  if (a === 'goal'){ state.goalPick = Number(b.dataset.g); render(); }
+
+  else if (a === 'join') act(async function(){
+    var name = ($('name').value || '').trim();
+    if (!name) throw new Error('닉네임을 적어 주세요.');
+    saveMe(await rpc('join_challenge', { p_name:name, p_goal:state.goalPick }));
+    state.msg = '환영해요, ' + state.me.name + ' 님.';
+  });
+
+  else if (a === 'relink') act(async function(){
+    state.openRe = true;
+    var name = ($('rename').value || '').trim();
+    if (!name) throw new Error('등록했던 닉네임을 적어 주세요.');
+    saveMe(await rpc('relink_by_name', { p_name:name }));
+    state.openRe = false; state.msg = state.me.name + ' 님, 다시 연결됐어요. 기록은 그대로예요.';
+  });
+
+  else if (a === 'checkin') act(async function(){
+    var url = ($('url').value || '').trim();
+    if (!url) throw new Error('발행한 콘텐츠의 링크를 붙여넣어 주세요.');
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    await rpc('check_in', { p_token:state.me.token, p_url:url });
+    $('url').value = ''; state.msg = '툭, 오늘도 해냈어요.';
+  });
+
+  else if (a === 'logout'){ clearMe(); state.msg = ''; state.openRe = true; render(); }
+
+  else if (a === 'a-login') (async function(){
+    var v = $('apw').value; amsg('확인 중…');
+    try {
+      if (await rpc('is_admin', { p_password:v })){
+        state.adminPw = v; try { sessionStorage.setItem('maeiltuk.admin', v); } catch(e){}
+        state.adminSel = state.people[0] ? state.people[0].id : null; render();
+      } else amsg('비밀번호가 맞지 않아요. 다시 입력해 주세요.');
+    } catch(e){ amsg(e.message); }
+  })();
+
+  else if (a === 'a-logout'){ state.adminPw = null; try { sessionStorage.removeItem('maeiltuk.admin'); } catch(e){} render(); }
+
+  else if (a === 'a-link') (async function(){
+    try {
+      var r = await rpc('admin_get_token', { p_password:pw, p_participant:sel });
+      var link = location.origin + location.pathname + '?key=' + r.token;
+      $('alink').textContent = link;
+      try { await navigator.clipboard.writeText(link); amsg(r.name + ' 님의 연결 링크를 복사했어요. 본인에게만 보내 주세요.'); }
+      catch(e){ amsg('위 주소를 길게 눌러 복사해서 ' + r.name + ' 님에게만 보내 주세요.'); }
+    } catch(e){ amsg(e.message); }
+  })();
+
+  else if (a === 'a-add') adminDo(function(){
+    if (!$('aday').value) throw new Error('날짜를 골라 주세요.');
+    return rpc('admin_set_day', { p_password:pw, p_participant:sel, p_day:$('aday').value, p_url:$('aurl').value.trim() || null });
+  }, '인증을 추가했어요.');
+
+  else if (a === 'a-del') adminDo(function(){
+    return rpc('admin_remove_checkin', { p_password:pw, p_checkin:Number(b.dataset.id) });
+  }, '인증을 삭제했어요.');
+
+  else if (a === 'a-goal') adminDo(function(){
+    return rpc('admin_set_goal', { p_password:pw, p_participant:sel, p_goal:Number($('agoal').value) });
+  }, '목표를 바꿨어요.');
+
+  else if (a === 'a-remove'){
+    if (b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '한 번 더 누르면 기록까지 모두 삭제돼요'; return; }
+    adminDo(function(){ return rpc('admin_remove', { p_password:pw, p_participant:sel }); }, '참가자를 삭제했어요.');
+  }
+
+  else if (a === 'a-start') adminDo(function(){
+    if (!$('astart').value) throw new Error('시작일을 골라 주세요.');
+    return rpc('admin_set_start', { p_password:pw, p_start:$('astart').value });
+  }, '기간을 바꿨어요.');
+});
+
+async function adminDo(fn, okMsg){
+  var out;
+  try { await fn(); out = okMsg; } catch(e){ out = e.message; }
+  $('admin').dataset.sig = '';
+  await refresh(); amsg(out);
+}
+
+document.addEventListener('change', function(ev){
+  if (ev.target.id === 'asel'){ state.adminSel = ev.target.value; render(); }
+});
+document.addEventListener('keydown', function(ev){
+  if (ev.key !== 'Enter') return;
+  var map = { url:'checkin', name:'join', rename:'relink', apw:'a-login' }, a = map[ev.target.id];
+  if (a){ var b = document.querySelector('[data-act="' + a + '"]'); if (b) b.click(); }
+});
+document.addEventListener('visibilitychange', function(){ if (!document.hidden && state.loaded && !state.busy) refresh(); });
+
+boot();
+})();
+</script>
+</body>
+</html>
