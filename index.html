@@ -692,16 +692,7 @@ function profileView(){
     (p.target ? '<p class="hint" style="margin-top:6px"><b>타겟</b> · ' + esc(p.target) + '</p>' : '') +
     (p.value ? '<p class="hint" style="margin-top:4px"><b>가치</b> · ' + esc(p.value) + '</p>' : '') +
     (!hasInfo ? '<p class="hint" style="margin-top:0">한 줄 소개, 타겟, 가치를 적어 둘 수 있어요. (선택)</p>' : '') + '</div>';
-  if (mine && ui.social){
-    var ig = ui.social.filter(function(x){ return x.platform === 'instagram'; })[0];
-    h += '<div class="panel"><h2>계정 연결<small>나에게만 보여요</small></h2>' + (ig
-      ? '<p style="font-size:15px;font-weight:600">인스타그램 @' + esc(ig.username || '') + '</p>' +
-        '<p class="hint num" style="margin-top:4px">' + (ig.followers != null ? '팔로워 ' + Number(ig.followers).toLocaleString('ko-KR') + '명 · ' : '') + '게시물 ' + ig.media + '개 수집됨</p>' +
-        (ig.last_error ? '<p class="hint">최근 수집에 문제가 있었어요: ' + esc(ig.last_error) + '</p>' : '') +
-        '<button class="link" data-act="soc-off" data-p="instagram" data-confirm="한 번 더 누르면 연결이 해제되고 수집한 기록이 지워져요">연결 해제</button>'
-      : '<p class="hint" style="margin-top:0">인스타그램을 연결하면 팔로워 변화와 게시물 반응을 자동으로 모아 드려요. 읽기만 하고, 글을 올리거나 메시지를 보내지 않아요.</p>' +
-        '<button class="btn" data-act="soc-on" data-p="instagram">인스타그램 연결하기</button><p class="hint">프로페셔널(비즈니스·크리에이터) 계정만 연결할 수 있어요.</p>') + '</div>';
-  }
+  h += reportPanel(mine);
   if (mine && ui.avEdit) h += '<div class="panel"><h2>내 캐릭터<button class="link" data-act="av-cancel">취소</button></h2>' + picker() + '<button class="btn" data-act="av-save">이 캐릭터로 저장</button></div>';
   h += '<div class="panel"><h2>주간 달성 기록</h2>' + (p.seasons.length ? p.seasons.map(function(s){
     return '<div class="strip"><b>' + s.number + '기</b><span class="tiles">' + s.weeks.map(function(w){
@@ -724,6 +715,64 @@ function profileView(){
     return row + '</div>';
   }).join('');
   return h + '</div>';
+}
+
+/* ───────── 성과 리포트 (본인과 운영자만) ───────── */
+var MEDIA_LABEL = { REELS:'릴스', CAROUSEL_ALBUM:'여러 장', IMAGE:'사진', VIDEO:'영상' };
+function signed(n){ return (n > 0 ? '+' : '') + Number(n).toLocaleString('ko-KR'); }
+function reportPanel(mine){
+  var R = ui.rep; if (!R) return '';
+  var h = '<div class="panel"><h2>성과 리포트<small>' + (mine ? '나와 운영자만 볼 수 있어요' : '운영자 보기') + '</small></h2>';
+  if (!R.username || (mine && ui.igEdit)){
+    if (!mine) return h + '<p class="hint" style="margin-top:0">아직 인스타그램 아이디를 등록하지 않았어요.</p></div>';
+    return h + '<p class="hint" style="margin-top:0">인스타그램 아이디만 적으면 팔로워 변화와 게시물 반응을 모아 드려요. 로그인이나 권한 허용은 필요 없어요.</p>' +
+      '<input class="field" id="igname" data-keep placeholder="인스타그램 아이디" autocapitalize="off" autocomplete="off" style="margin-top:10px" value="' + esc(R.username || '') + '">' +
+      '<button class="btn" data-act="ig-save"' + (busy ? ' disabled' : '') + '>' + (R.username ? '아이디 바꾸기' : '아이디 등록하기') + '</button>' +
+      (R.username ? '<button class="link" data-act="ig-cancel" style="display:block;margin:6px auto 0">취소</button>' : '') +
+      '<p class="hint">프로페셔널(비즈니스·크리에이터) 계정만 조회돼요. 인스타그램 앱 설정에서 무료로 바꿀 수 있어요.</p></div>';
+  }
+  var f = R.followers || [], media = R.media || [], now = f.length ? f[f.length - 1] : null, first = f[0] || null, t = dnum(S.today), base = null;
+  f.forEach(function(x){ if (dnum(x.day) <= t - 28) base = x; });
+  function react(m){ return (m.likes || 0) + (m.comments || 0); }
+  var recent = media.slice(0, 10), avg = recent.length ? Math.round(recent.reduce(function(a, m){ return a + react(m); }, 0) / recent.length) : null;
+  h += '<p class="hint" style="margin-top:0">인스타그램 @' + esc(R.username) + '</p><div class="stats" style="margin:10px 0 0">' +
+    '<div class="stat sp"><small>팔로워</small><b class="num">' + (now ? Number(now.n).toLocaleString('ko-KR') + '명' : '—') + '</b></div>' +
+    '<div class="stat sp"><small>4주 전 대비</small><b class="num">' + (base && now ? signed(now.n - base.n) : '—') + '</b>' +
+      (base ? '' : '<small>' + (first ? md(dstr(dnum(first.day) + 28)) + '부터 비교돼요' : '수집 전이에요') + '</small>') + '</div>' +
+    '<div class="stat sp"><small>수집 시작 이후' + (first ? ' (' + md(first.day) + '~)' : '') + '</small><b class="num">' + (first && now ? signed(now.n - first.n) : '—') + '</b></div>' +
+    '<div class="stat sp"><small>최근 게시물 평균 반응</small><b class="num">' + (avg == null ? '—' : avg.toLocaleString('ko-KR')) + '</b><small>좋아요 + 댓글</small></div></div>';
+  if (media.length >= 3){
+    var byType = {}, byDay = {}, days = ['일','월','화','수','목','금','토'], top = media.slice().sort(function(a, b){ return react(b) - react(a); })[0];
+    media.forEach(function(m){
+      var k = MEDIA_LABEL[m.type] || '기타'; (byType[k] = byType[k] || []).push(react(m));
+      if (m.posted_at){ var d = days[new Date(new Date(m.posted_at).getTime() + 9 * 3600e3).getUTCDay()]; (byDay[d] = byDay[d] || []).push(react(m)); }
+    });
+    function mean(a){ return Math.round(a.reduce(function(x, y){ return x + y; }, 0) / a.length); }
+    var types = Object.keys(byType).map(function(k){ return { k:k, v:mean(byType[k]), n:byType[k].length }; }).sort(function(a, b){ return b.v - a.v; });
+    var dd = Object.keys(byDay).filter(function(k){ return byDay[k].length >= 2; }).map(function(k){ return { k:k, v:mean(byDay[k]) }; }).sort(function(a, b){ return b.v - a.v; });
+    h += '<p class="label">반응이 좋았던 것 <span style="font-weight:400">(최근 ' + media.length + '개 기준)</span></p><div class="guide">' +
+      '<p style="margin-top:0"><b>유형</b> · ' + types.map(function(x){ return x.k + ' 평균 ' + x.v.toLocaleString('ko-KR') + ' (' + x.n + '개)'; }).join(' / ') + '</p>' +
+      (dd.length >= 2 ? '<p><b>요일</b> · ' + dd[0].k + '요일에 올린 글의 평균 반응이 가장 높았어요 (' + dd[0].v.toLocaleString('ko-KR') + ')</p>' : '') +
+      (top && safeUrl(top.permalink) ? '<p><b>가장 반응이 컸던 글</b> · <a href="' + esc(top.permalink) + '" target="_blank" rel="noopener noreferrer">' + md(String(top.posted_at).slice(0, 10)) + ' ' + (MEDIA_LABEL[top.type] || '') + ' ↗</a> (좋아요 ' + (top.likes || 0) + ' · 댓글 ' + (top.comments || 0) + ')</p>' : '') + '</div>';
+  }
+  if (media.length){
+    var hasViews = media.some(function(m){ return m.views != null; });
+    h += '<p class="label">최근 게시물</p><table><tr><th>날짜</th><th>유형</th><th>좋아요</th><th>댓글</th>' + (hasViews ? '<th>조회</th>' : '') + '</tr>' + media.slice(0, 8).map(function(m){
+      var u = safeUrl(m.permalink), d = m.posted_at ? md(new Date(new Date(m.posted_at).getTime() + 9 * 3600e3).toISOString().slice(0, 10)) : '';
+      return '<tr><td>' + (u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + d + ' ↗</a>' : d) + '</td><td>' + (MEDIA_LABEL[m.type] || '기타') + '</td><td class="num">' +
+        (m.likes == null ? '—' : m.likes.toLocaleString('ko-KR')) + '</td><td class="num">' + (m.comments == null ? '—' : m.comments.toLocaleString('ko-KR')) + '</td>' +
+        (hasViews ? '<td class="num">' + (m.views == null ? '—' : m.views.toLocaleString('ko-KR')) + '</td>' : '') + '</tr>'; }).join('') + '</table>';
+  } else h += '<p class="hint">아직 수집된 게시물이 없어요.</p>';
+  h += '<p class="hint">' + (R.updated ? '마지막 수집 ' + md(new Date(new Date(R.updated).getTime() + 9 * 3600e3).toISOString().slice(0, 10)) + ' · ' : '') + '공개된 수치만 모아요. 저장·공유 수는 포함되지 않아요.</p>' +
+    (mine ? '<button class="link" data-act="ig-edit">아이디 바꾸기</button> <button class="link" data-act="ig-clear" data-confirm="한 번 더 누르면 수집한 기록이 지워져요">등록 해제</button>' : '');
+  return h + '</div>';
+}
+async function fn(path, body){
+  var r, j;
+  try { r = await fetch(CFG.url + '/functions/v1/social/' + path, { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify(body) }); j = await r.json(); }
+  catch(e){ throw new Error('수집 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.'); }
+  if (j && j.error) throw new Error(j.error);
+  return j;
 }
 
 /* ───────── 화면: 서비스 가이드 ───────── */
@@ -804,9 +853,14 @@ function adminView(){
         (p.intent === 'join' ? '입금 ' + won(d + (se.rejoin_fee || 0)) : '반환 ' + won(total - d)) + '</td></tr>'; }).join('') + '</table>' +
     '<p class="hint">입금 = 부족한 보증금 + 재참가비, 반환 = 남은 보증금이에요. 미응답은 반환으로 처리돼요.' + (unsettled ? ' 아직 확정되지 않은 주가 있어 금액이 바뀔 수 있어요.' : '') + '</p></details></div>';
 
-  h += '<div class="panel"><details id="disc"><summary>공개 수치 조회 시험</summary><p class="hint" style="margin-top:0">연결 없이 아이디만으로 다른 프로페셔널 계정의 수치가 조회되는지 확인해요.</p>' +
-    '<div class="row2"><input class="field" id="dname" data-keep placeholder="인스타그램 아이디" autocapitalize="off" autocomplete="off"></div>' +
-    '<button class="btn sm" data-act="a-disc">조회해 보기</button><pre id="dout" style="font-size:12px;white-space:pre-wrap;word-break:break-all;margin-top:10px">' + esc(ui.discOut || '') + '</pre></details></div>';
+  var igc = (ui.social || []).filter(function(x){ return x.platform === 'instagram'; })[0];
+  h += '<div class="panel"><details id="collect"><summary>성과 수집</summary>' +
+    '<p class="hint" style="margin-top:0">운영자 인스타그램 연결의 권한으로, 참가자가 등록한 아이디의 공개 수치를 모아요. 연결을 해제하면 수집이 멈춰요.</p>' +
+    (igc ? '<p style="font-size:15px;font-weight:600;margin-top:8px">연결됨 · 인스타그램 @' + esc(igc.username || '') + '</p>' +
+           '<button class="btn sm" data-act="a-sync"' + (busy ? ' disabled' : '') + '>지금 전체 수집하기</button>' +
+           '<button class="link" data-act="soc-off" data-p="instagram" data-confirm="한 번 더 누르면 연결이 해제되고 수집이 멈춰요">연결 해제</button>'
+         : '<button class="btn sm" data-act="soc-on" data-p="instagram">운영자 인스타그램 연결하기</button>') +
+    '<pre style="font-size:12px;white-space:pre-wrap;word-break:break-all;margin-top:10px">' + esc(ui.syncOut || '') + '</pre></details></div>';
 
   h += '<div class="panel"><h2>참가자 <small>' + A.participants.length + '명</small></h2>' + A.participants.map(function(p){
     var o = ui.aOpen && ui.aOpen.id === p.id ? ui.aOpen.mode : null;
@@ -854,10 +908,10 @@ async function load(){
     if (ui.backToMine){ ui.backToMine = false; if (S.me){ view = { name:'profile', id:S.me.id }; ui.fSeason = 'all'; } }
     if (view.name === 'profile'){
       ui.prof = await rpc('get_profile', { p_participant: view.id });
-      ui.social = null;
-      if (LIVE && token && S.me && S.me.id === view.id){ try { ui.social = await rpc('my_social', { p_token: token }); } catch(e){} }
+      ui.rep = null;
+      if (LIVE && token && S.me && (S.me.id === view.id || S.me.is_admin)){ try { ui.rep = await rpc('report', { p_token: token, p_participant: view.id }); } catch(e){} }
     }
-    if (view.name === 'admin') ui.AD = await rpc('admin_data', { p_token: token, p_season_id: ui.aSeason });
+    if (view.name === 'admin'){ ui.AD = await rpc('admin_data', { p_token: token, p_season_id: ui.aSeason }); try { ui.social = await rpc('my_social', { p_token: token }); } catch(e){ ui.social = []; } }
   } catch(e){
     if (!S) ui.loadError = e.message + ' 화면을 새로고침해 보세요.'; else toast(e.message);
   }
@@ -874,7 +928,7 @@ function route(){
   if (h.indexOf('social/') === 0){                       // 계정 연결을 마치고 돌아온 경우
     var parts = h.split('/'), m = decodeURIComponent(parts.slice(2).join('/') || '');
     toast(parts[1] === 'ok' ? (m === 'instagram' ? '인스타그램을 연결했어요.' : m) : '연결하지 못했어요. ' + m);
-    ui.backToMine = true; view = { name:'home' };
+    view = { name:'admin' };
     try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
   }
   else if (h.indexOf('p/') === 0){ view = { name:'profile', id:h.slice(2) }; ui.prof = null; ui.fSeason = 'all'; }
@@ -949,6 +1003,16 @@ document.addEventListener('click', function(ev){
   });
   else if (a === 'soc-off') run(async function(){ await rpc('disconnect_social', { p_token:token, p_platform:b.dataset.p }); toast('연결을 해제했어요.'); });
 
+  /* 성과 리포트 */
+  else if (a === 'ig-edit'){ ui.igEdit = true; render(); }
+  else if (a === 'ig-cancel'){ ui.igEdit = false; render(); }
+  else if (a === 'ig-save') run(async function(){
+    var n = val('igname').replace(/^@/, ''); if (!n) throw new Error('인스타그램 아이디를 적어 주세요.');
+    var r = await fn('track', { token:token, username:n }); ui.igEdit = false;
+    toast('@' + r.username + ' 등록 완료. 팔로워 ' + Number(r.followers).toLocaleString('ko-KR') + '명, 게시물 ' + r.media + '개를 불러왔어요.');
+  });
+  else if (a === 'ig-clear') run(async function(){ await rpc('clear_ig', { p_token:token }); toast('등록을 해제했어요.'); });
+
   /* 계정 소개 */
   else if (a === 'info-edit'){ ui.infoEdit = true; render(); }
   else if (a === 'info-cancel'){ ui.infoEdit = false; render(); }
@@ -1003,15 +1067,13 @@ document.addEventListener('click', function(ev){
   else if (a === 'a-final') run(async function(){ await rpc('admin_finalize', { p_token:token, p_season_id:ui.AD.season.id, p_week_no:Number(b.dataset.w) }); toast(b.dataset.w + '주차 정산을 확정했어요.'); });
   else if (a === 'a-unfinal') run(async function(){ await rpc('admin_unfinalize', { p_token:token, p_season_id:ui.AD.season.id, p_week_no:Number(b.dataset.w) }); toast('확정을 풀었어요. 현재 인증 기준으로 다시 계산돼요.'); });
   else if (a === 'a-csv') csv();
-  else if (a === 'a-disc') (async function(){
-    ui.discOut = '조회 중…'; render();
+  else if (a === 'a-sync') run(async function(){
+    ui.syncOut = '수집 중…'; render();
     try {
-      var r = await fetch(CFG.url + '/functions/v1/social/discover', { method:'POST', headers:{ 'content-type':'application/json' },
-        body: JSON.stringify({ token:token, username:val('dname') }) });
-      ui.discOut = JSON.stringify(await r.json(), null, 2);
-    } catch(e){ ui.discOut = '요청하지 못했어요: ' + (e && e.message || e); }
-    render();
-  })();
+      var r = await fn('sync', { token:token });
+      ui.syncOut = (r.results || []).map(function(x){ return x.name + ' · ' + (x.error ? '실패: ' + x.error : '@' + x.username + ' 팔로워 ' + x.followers + '명, 게시물 ' + x.media + '개'); }).join('\n') || '등록된 아이디가 아직 없어요.';
+    } catch(e){ ui.syncOut = e.message; }
+  });
   else if (a === 'a-rejoin') run(async function(){
     await rpc('admin_set_rejoin', { p_token:token, p_season_id:ui.AD.season.id, p_from:val('rjfrom') || null, p_until:val('rjuntil') || null,
       p_fee:Number(val('rjfee')) || 0, p_pay_info:val('rjpay') || null, p_pay_due:val('rjdue') || null, p_refund_on:val('rjrefund') || null });

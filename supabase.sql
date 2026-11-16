@@ -111,6 +111,7 @@ alter table public.participants add column if not exists avatar text;      -- �
 alter table public.participants add column if not exists account_intro  text;   -- 계정 한 줄 소개(선택)
 alter table public.participants add column if not exists account_target text;   -- 타겟(선택)
 alter table public.participants add column if not exists account_value  text;   -- 제공 가치(선택)
+alter table public.participants add column if not exists ig_username    text;   -- 성과 수집용 인스타그램 아이디(선택)
 create unique index if not exists participants_name_norm_key on public.participants (public._norm(name));
 
 create table if not exists public.seasons (
@@ -556,14 +557,43 @@ begin
           from social_accounts a where a.participant_id = me.id);
 end $$;
 
+-- 성과 리포트: 본인 또는 운영자만
+create or replace function public.report(p_token text, p_participant uuid) returns json
+language plpgsql stable security definer set search_path = public, extensions as $$
+declare me participants; p participants;
+begin
+  me := _auth(p_token);
+  if me.id <> p_participant and not me.is_admin then raise exception '본인의 리포트만 볼 수 있어요.'; end if;
+  select * into p from participants where id = p_participant;
+  if not found then raise exception '참가자를 찾지 못했어요.'; end if;
+  return json_build_object('username', p.ig_username,
+    'ready', exists (select 1 from social_accounts where platform = 'instagram'),
+    'followers', (select coalesce(json_agg(json_build_object('day', f.day, 'n', f.followers) order by f.day), '[]'::json)
+                  from follower_snapshots f where f.participant_id = p.id and f.platform = 'instagram'),
+    'media', (select coalesce(json_agg(x order by x.posted_at desc), '[]'::json) from (
+                select m.permalink, m.posted_at, m.media_type as type, (m.metrics->>'likes')::int as likes,
+                       (m.metrics->>'comments')::int as comments, (m.metrics->>'views')::int as views
+                from media_metrics m where m.participant_id = p.id and m.platform = 'instagram'
+                order by m.posted_at desc limit 30) x),
+    'updated', (select max(m.fetched_at) from media_metrics m where m.participant_id = p.id and m.platform = 'instagram'));
+end $$;
+
+create or replace function public.clear_ig(p_token text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare me participants;
+begin
+  me := _auth(p_token);
+  update participants set ig_username = null where id = me.id;
+  delete from follower_snapshots where participant_id = me.id and platform = 'instagram';
+  delete from media_metrics      where participant_id = me.id and platform = 'instagram';
+end $$;
+
 create or replace function public.disconnect_social(p_token text, p_platform text) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare me participants;
 begin
   me := _auth(p_token);
-  delete from social_accounts    where participant_id = me.id and platform = p_platform;
-  delete from follower_snapshots where participant_id = me.id and platform = p_platform;
-  delete from media_metrics      where participant_id = me.id and platform = p_platform;
+  delete from social_accounts where participant_id = me.id and platform = p_platform;
 end $$;
 
 create or replace function public.logout(p_token text) returns void
@@ -922,7 +952,7 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and (p.proname like '\_%' or p.proname like 'admin\_%'
-           or p.proname in ('name_status','register','login','logout','set_avatar','set_rejoin','set_account_info','start_connect','my_social','disconnect_social','enroll','add_post','update_post',
+           or p.proname in ('name_status','register','login','logout','set_avatar','set_rejoin','set_account_info','start_connect','my_social','disconnect_social','report','clear_ig','enroll','add_post','update_post',
                             'delete_post','toggle_cheer','get_state','get_profile'))
   loop
     if f.proname like '\_%' then
