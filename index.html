@@ -679,13 +679,18 @@ function profileView(){
       '<div class="track" style="margin-top:8px"><i style="width:' + pctLv + '%"></i></div></div>' +
     '<div class="stat sp"><small>랠리 (연속 달성)</small><b class="num">' + p.rally + '주</b></div>' +
     '<div class="stat sp"><small>최고 랠리</small><b class="num">' + p.best + '주</b></div></div>';
+  var hasInfo = p.intro || p.target || p.value;
   if (mine && ui.infoEdit) h += '<div class="panel"><h2>계정 소개<button class="link" data-act="info-cancel">취소</button></h2>' +
-    '<p class="label" style="margin-top:0">이 계정을 한 줄로 소개한다면</p><input class="field" id="iintro" data-keep maxlength="100" placeholder="예: 혼자 일하는 사람의 루틴을 기록해요" value="' + esc(p.intro || '') + '">' +
-    '<p class="label">누구에게 말하고 싶나요 (타겟)</p><input class="field" id="itarget" data-keep maxlength="100" placeholder="예: 퇴사를 고민하는 3년 차 직장인" value="' + esc(p.target || '') + '">' +
+    '<p class="label" style="margin-top:0">한 줄 소개</p><input class="field" id="iintro" data-keep maxlength="100" placeholder="예: 혼자 일하는 프리랜서에게 지치지 않는 루틴을 알려주는 기록 계정" value="' + esc(p.intro || '') + '">' +
+    '<p class="hint">"어떤 사람에게, 어떤 가치를 주는, 무엇"이 드러나게 적어 보세요.</p>' +
+    '<p class="label">타겟 · 어떤 사람을 위해 콘텐츠를 만드나요?</p><input class="field" id="itarget" data-keep maxlength="100" placeholder="예: 퇴사 후 혼자 일하기 시작한 1~3년 차 프리랜서" value="' + esc(p.target || '') + '">' +
+    '<p class="label">가치 · 계정을 팔로우하면 무엇을 얻을 수 있나요?</p><input class="field" id="ivalue" data-keep maxlength="100" placeholder="예: 바로 따라 할 수 있는 하루 루틴과 일 관리 방법" value="' + esc(p.value || '') + '">' +
     '<button class="btn" data-act="info-save">저장</button><p class="hint">선택 사항이에요. 적어 두면 나중에 소재 제안이 더 잘 맞아요.</p></div>';
-  else if (p.intro || p.target || mine) h += '<div class="panel"><h2>계정 소개' + (mine ? '<button class="link" data-act="info-edit">' + (p.intro || p.target ? '수정' : '적기') + '</button>' : '') + '</h2>' +
-    (p.intro ? '<p style="font-size:15px">' + esc(p.intro) + '</p>' : '') + (p.target ? '<p class="hint" style="margin-top:4px">타겟 · ' + esc(p.target) + '</p>' : '') +
-    (!p.intro && !p.target ? '<p class="hint" style="margin-top:0">계정 한 줄 소개와 타겟을 적어 둘 수 있어요. (선택)</p>' : '') + '</div>';
+  else if (hasInfo || mine) h += '<div class="panel"><h2>계정 소개' + (mine ? '<button class="link" data-act="info-edit">' + (hasInfo ? '수정' : '적기') + '</button>' : '') + '</h2>' +
+    (p.intro ? '<p style="font-size:15px;font-weight:600">' + esc(p.intro) + '</p>' : '') +
+    (p.target ? '<p class="hint" style="margin-top:6px"><b>타겟</b> · ' + esc(p.target) + '</p>' : '') +
+    (p.value ? '<p class="hint" style="margin-top:4px"><b>가치</b> · ' + esc(p.value) + '</p>' : '') +
+    (!hasInfo ? '<p class="hint" style="margin-top:0">한 줄 소개, 타겟, 가치를 적어 둘 수 있어요. (선택)</p>' : '') + '</div>';
   if (mine && ui.avEdit) h += '<div class="panel"><h2>내 캐릭터<button class="link" data-act="av-cancel">취소</button></h2>' + picker() + '<button class="btn" data-act="av-save">이 캐릭터로 저장</button></div>';
   h += '<div class="panel"><h2>주간 달성 기록</h2>' + (p.seasons.length ? p.seasons.map(function(s){
     return '<div class="strip"><b>' + s.number + '기</b><span class="tiles">' + s.weeks.map(function(w){
@@ -915,7 +920,7 @@ document.addEventListener('click', function(ev){
   else if (a === 'info-edit'){ ui.infoEdit = true; render(); }
   else if (a === 'info-cancel'){ ui.infoEdit = false; render(); }
   else if (a === 'info-save') run(async function(){
-    await rpc('set_account_info', { p_token:token, p_intro:val('iintro') || null, p_target:val('itarget') || null }); ui.infoEdit = false; toast('계정 소개를 저장했어요.');
+    await rpc('set_account_info', { p_token:token, p_intro:val('iintro') || null, p_target:val('itarget') || null, p_value:val('ivalue') || null }); ui.infoEdit = false; toast('계정 소개를 저장했어요.');
   });
 
   /* 캐릭터 */

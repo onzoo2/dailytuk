@@ -110,6 +110,7 @@ create table if not exists public.participants (
 alter table public.participants add column if not exists avatar text;      -- 캐릭터 '도형-색' (예: 3-5)
 alter table public.participants add column if not exists account_intro  text;   -- 계정 한 줄 소개(선택)
 alter table public.participants add column if not exists account_target text;   -- 타겟(선택)
+alter table public.participants add column if not exists account_value  text;   -- 제공 가치(선택)
 create unique index if not exists participants_name_norm_key on public.participants (public._norm(name));
 
 create table if not exists public.seasons (
@@ -474,15 +475,19 @@ begin
   on conflict (participant_id, season_id) do update set answer = excluded.answer, answered_at = now();
 end $$;
 
-create or replace function public.set_account_info(p_token text, p_intro text, p_target text) returns void
+drop function if exists public.set_account_info(text, text, text);
+create or replace function public.set_account_info(p_token text, p_intro text, p_target text, p_value text) returns void
 language plpgsql security definer set search_path = public, extensions as $$
-declare me participants; v_i text := nullif(btrim(coalesce(p_intro, '')), ''); v_t text := nullif(btrim(coalesce(p_target, '')), '');
+declare me participants;
+  v_i text := nullif(btrim(coalesce(p_intro, '')), '');
+  v_t text := nullif(btrim(coalesce(p_target, '')), '');
+  v_v text := nullif(btrim(coalesce(p_value, '')), '');
 begin
   me := _auth(p_token);
-  if char_length(coalesce(v_i, '')) > 100 or char_length(coalesce(v_t, '')) > 100 then
-    raise exception '소개와 타겟은 각각 100자 안으로 적어 주세요.';
+  if greatest(char_length(coalesce(v_i, '')), char_length(coalesce(v_t, '')), char_length(coalesce(v_v, ''))) > 100 then
+    raise exception '각 항목은 100자 안으로 적어 주세요.';
   end if;
-  update participants set account_intro = v_i, account_target = v_t where id = me.id;
+  update participants set account_intro = v_i, account_target = v_t, account_value = v_v where id = me.id;
 end $$;
 
 create or replace function public.logout(p_token text) returns void
@@ -661,7 +666,7 @@ begin
   where e.participant_id = p.id;
 
   return json_build_object('id', p.id, 'name', p.name, 'avatar', p.avatar,
-    'intro', p.account_intro, 'target', p.account_target,
+    'intro', p.account_intro, 'target', p.account_target, 'value', p.account_value,
     'total', (select count(*) from posts where participant_id = p.id),
     'cheers', (select count(*) from cheers c join posts po on po.id = c.post_id where po.participant_id = p.id),
     'rally', rc, 'best', rb, 'posts', v_posts, 'seasons', v_seasons);
