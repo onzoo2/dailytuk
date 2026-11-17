@@ -161,9 +161,13 @@
   .hero .av:nth-child(even){transform:rotate(7deg)}
   .hi{display:flex;align-items:center;gap:10px;min-width:0}
   .hi .av{width:40px;height:40px}
-  .stat{border:0;border-radius:22px}
+  .stat{border:0;border-radius:16px}
   .stat small{color:rgba(39,34,31,.72)}
-  .stat.s0{background:var(--c2)} .stat.s1{background:var(--c7)} .stat.s2{background:var(--c4)} .stat.s3{background:var(--c6)}
+  .stat.s0,.stat.s1,.stat.s2,.stat.s3{background:var(--ink);color:#FAF6EF;border-radius:14px;padding:10px 14px}
+  .stat.s0 b,.stat.s1 b,.stat.s2 b,.stat.s3 b{font-size:17px;margin-top:1px}
+  .stat.s0 small,.stat.s1 small,.stat.s2 small,.stat.s3 small{font-size:11.5px}
+  .stat.s0 small,.stat.s1 small,.stat.s2 small,.stat.s3 small{color:rgba(250,246,239,.66)}
+  .stat.s0 b,.stat.s1 b,.stat.s2 b,.stat.s3 b{color:#FAF6EF}
   .banner{background:var(--c3);color:var(--ink);border-radius:22px}
   .tab{border-radius:99px}
   .prow{position:relative;overflow:hidden;border:0;border-radius:22px;padding:16px 104px 16px 18px;min-height:112px}
