@@ -210,13 +210,6 @@
   .ti{flex:none;width:34px;height:34px;padding:7px;border-radius:10px;background:var(--bg);color:var(--ink)}
   .pitem .l1 .d{width:38px}
   .pitem .l2{margin-left:42px}
-  textarea.field{height:auto;min-height:86px;padding:12px 14px;line-height:1.5;resize:vertical;font-family:inherit}
-  .idea{border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:10px;background:#fff}
-  .idea.on{border-color:var(--ink)} .idea.done{background:var(--bg)}
-  .idea b{display:block;font-size:16px;line-height:1.4}
-  .idea .lk{font-size:13px;color:var(--muted);margin-top:4px}
-  .idea .op{font-size:14px;margin-top:8px;padding:8px 12px;border-radius:12px;background:var(--bg)}
-  .idea .acts{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
   .stat.sp{background:var(--card);border:1px solid var(--line)}
   .stat.sp small{color:var(--muted)}
   .pcard{min-height:132px}
@@ -695,13 +688,12 @@ function profileView(){
     '<p class="label" style="margin-top:0">한 줄 소개</p><input class="field" id="iintro" data-keep maxlength="100" value="' + esc(p.intro || '') + '">' +
     '<p class="label">타겟 · 어떤 사람을 위해 콘텐츠를 만드나요?</p><input class="field" id="itarget" data-keep maxlength="100" value="' + esc(p.target || '') + '">' +
     '<p class="label">가치 · 계정을 팔로우하면 무엇을 얻을 수 있나요?</p><input class="field" id="ivalue" data-keep maxlength="100" value="' + esc(p.value || '') + '">' +
-    '<button class="btn" data-act="info-save">저장</button><p class="hint">선택 사항이에요. 적어 두면 나중에 소재 제안이 더 잘 맞아요.</p></div>';
+    '<button class="btn" data-act="info-save">저장</button><p class="hint">선택 사항이에요.</p></div>';
   else if (hasInfo || mine) h += '<div class="panel"><h2>계정 소개' + (mine ? '<button class="link" data-act="info-edit">' + (hasInfo ? '수정' : '적기') + '</button>' : '') + '</h2>' +
     (p.intro ? '<p style="font-size:15px;font-weight:600">' + esc(p.intro) + '</p>' : '') +
     (p.target ? '<p class="hint" style="margin-top:6px"><b>타겟</b> · ' + esc(p.target) + '</p>' : '') +
     (p.value ? '<p class="hint" style="margin-top:4px"><b>가치</b> · ' + esc(p.value) + '</p>' : '') +
     (!hasInfo ? '<p class="hint" style="margin-top:0">한 줄 소개, 타겟, 가치를 적어 둘 수 있어요. (선택)</p>' : '') + '</div>';
-  h += ideasPanel(mine);
   h += reportPanel(mine);
   if (mine && ui.avEdit) h += '<div class="panel"><h2>내 캐릭터<button class="link" data-act="av-cancel">취소</button></h2>' + picker() + '<button class="btn" data-act="av-save">이 캐릭터로 저장</button></div>';
   h += '<div class="panel"><h2>주간 달성 기록</h2>' + (p.seasons.length ? p.seasons.map(function(s){
@@ -727,53 +719,6 @@ function profileView(){
   return h + '</div>';
 }
 
-/* ───────── 나의 이야기 · 소재 받기 (본인만) ───────── */
-var STORY_Q = [['why', '이 콘텐츠를 시작하게 된 계기', '계기'], ['now', '요즘 겪고 있는 일, 고민', '요즘'],
-               ['changed', '내가 직접 바꿔 본 것 (전과 후)', '바꾼 것'], ['asked', '사람들이 나에게 자주 묻는 것', '질문']];
-function kday(at){ return new Date(new Date(at).getTime() + 9 * 3600e3).toISOString().slice(0, 10); }
-function ideaCard(x){
-  var h = '<div class="idea' + (x.status === 'adopted' ? ' on' : x.status === 'done' ? ' done' : '') + '"><b>' + esc(x.title) + '</b>' +
-    (x.link ? '<p class="lk">' + esc(x.link) + '</p>' : '') +
-    (x.opener ? '<p class="op">“' + esc(x.opener) + '”</p>' : '') + '<div class="acts">' +
-    (x.format ? '<span class="tag soft">' + esc(x.format) + '</span>' : '');
-  if (x.status === 'new') h += '<button class="chip" data-act="idea-set" data-id="' + x.id + '" data-s="adopted">이걸로 쓸게요</button>';
-  else if (x.status === 'adopted') h += '<button class="chip" data-act="idea-set" data-id="' + x.id + '" data-s="done" aria-pressed="true">발행했어요</button>' +
-    '<button class="link" data-act="idea-set" data-id="' + x.id + '" data-s="new">취소</button>';
-  else h += '<span class="tag">발행 완료</span><button class="link" data-act="idea-set" data-id="' + x.id + '" data-s="adopted">되돌리기</button>';
-  return h + '</div></div>';
-}
-function ideasPanel(mine){
-  var I = ui.ideas; if (!mine || !I) return '';
-  var st = I.story || {}, has = STORY_Q.some(function(q){ return st[q[0]]; }), left = Math.max(0, (I.limit || 3) - (I.used || 0));
-  var h = '<div class="panel"><h2>나의 이야기 · 소재 받기' +
-    (ui.storyEdit ? '<button class="link" data-act="story-cancel">취소</button>' : (has ? '<button class="link" data-act="story-edit">수정</button>' : '')) + '</h2>';
-  if (ui.storyEdit){
-    h += STORY_Q.map(function(q, i){
-      return '<p class="label"' + (i ? '' : ' style="margin-top:0"') + '>' + q[1] + '</p><textarea class="field" id="sty-' + q[0] + '" data-keep maxlength="300" rows="3">' + esc(st[q[0]] || '') + '</textarea>';
-    }).join('') + '<button class="btn" data-act="story-save">저장</button><p class="hint">한 칸만 적어도 돼요. 나만 볼 수 있어요.</p></div>';
-    return h;
-  }
-  if (!has){
-    return h + '<p class="hint" style="margin-top:0">내 이야기를 적으면, 그 경험을 콘텐츠로 바꾸는 소재를 5개씩 제안해 드려요. 나만 볼 수 있어요.</p>' +
-      '<button class="btn" data-act="story-edit">나의 이야기 적기</button></div>';
-  }
-  h += STORY_Q.filter(function(q){ return st[q[0]]; }).map(function(q){
-    return '<p class="hint" style="margin-top:4px"><b>' + q[2] + '</b> · ' + esc(st[q[0]]) + '</p>'; }).join('');
-  h += '<button class="btn" data-act="ideas-get"' + (busy || !left ? ' disabled' : '') + '>' + (left ? '소재 5개 받기' : '오늘은 다 받았어요') + '</button>' +
-    '<p class="hint">' + (left ? '오늘 ' + left + '번 더 받을 수 있어요. 만드는 데 10~20초 걸려요.' : '내일 다시 받을 수 있어요.') + '</p>';
-  var ideas = I.ideas || [], batches = [], seen = {};
-  ideas.forEach(function(x){ if (!seen[x.batch]){ seen[x.batch] = []; batches.push(seen[x.batch]); } seen[x.batch].push(x); });
-  batches.forEach(function(bt){ bt.sort(function(x, y){ return x.id - y.id; }); });
-  if (batches.length){
-    h += '<p class="label">' + md(kday(batches[0][0].at)) + ' 받은 소재</p>' + batches[0].map(ideaCard).join('');
-    if (batches.length > 1){
-      h += '<details style="margin-top:12px"><summary class="hint" style="cursor:pointer">지난 소재 보기 (' + (batches.length - 1) + '번)</summary>' +
-        batches.slice(1).map(function(bt){
-          return '<p class="label">' + md(kday(bt[0].at)) + ' 받은 소재</p>' + bt.map(ideaCard).join(''); }).join('') + '</details>';
-    }
-  }
-  return h + '</div>';
-}
 /* ───────── 성과 리포트 (본인과 운영자만) ───────── */
 var MEDIA_LABEL = { REELS:'릴스', CAROUSEL_ALBUM:'여러 장', IMAGE:'사진', VIDEO:'영상' };
 function signed(n){ return (n > 0 ? '+' : '') + Number(n).toLocaleString('ko-KR'); }
@@ -860,8 +805,7 @@ function guideView(){
       '<p><b>인증을 깜빡했어요.</b><br>발행일을 그날로 고르면 다음 일요일 낮 12시까지 인증할 수 있어요. 그 뒤에는 운영자에게 알려 주세요.</p>' +
       '<p><b>같은 링크를 두 번 인증할 수 있나요?</b><br>아니요. 같은 링크는 한 번만 인정되고, 다른 참가자가 인증한 링크도 쓸 수 없어요.</p>' +
       '<p><b>PIN을 잊었어요.</b><br>운영자에게 초기화를 요청해 주세요. 다음 로그인 때 새 PIN을 정하게 돼요.</p>' +
-      '<p><b>목표를 바꾸고 싶어요.</b><br>시즌 시작 전에는 직접 바꿀 수 있고, 시작한 뒤에는 운영자에게 알려 주세요.</p>' +
-      '<p><b>소재 제안은 어떻게 받나요?</b><br>"내 기록"의 "나의 이야기"에 계기, 요즘 고민, 바꿔 본 것, 자주 받는 질문을 적고 "소재 5개 받기"를 누르세요. 적은 만큼 그 경험에서 출발한 소재가 나와요. 하루 3번까지 받을 수 있고, 나의 이야기와 받은 소재는 나만 볼 수 있어요.</p>') +
+      '<p><b>목표를 바꾸고 싶어요.</b><br>시즌 시작 전에는 직접 바꿀 수 있고, 시작한 뒤에는 운영자에게 알려 주세요.</p>') +
     '<p class="hint" style="text-align:center"><a href="privacy.html">개인정보 처리방침</a></p>';
 }
 
@@ -968,8 +912,6 @@ async function load(){
       ui.prof = await rpc('get_profile', { p_participant: view.id });
       ui.rep = null;
       if (LIVE && token && S.me && (S.me.id === view.id || S.me.is_admin)){ try { ui.rep = await rpc('report', { p_token: token, p_participant: view.id }); } catch(e){} }
-      ui.ideas = null;
-      if (LIVE && token && S.me && S.me.id === view.id){ try { ui.ideas = await rpc('my_ideas', { p_token: token }); } catch(e){} }
     }
     if (view.name === 'admin'){ ui.AD = await rpc('admin_data', { p_token: token, p_season_id: ui.aSeason }); try { ui.social = await rpc('my_social', { p_token: token }); } catch(e){ ui.social = []; } }
   } catch(e){
@@ -1079,18 +1021,6 @@ document.addEventListener('click', function(ev){
   else if (a === 'info-save') run(async function(){
     await rpc('set_account_info', { p_token:token, p_intro:val('iintro') || null, p_target:val('itarget') || null, p_value:val('ivalue') || null }); ui.infoEdit = false; toast('계정 소개를 저장했어요.');
   });
-
-  /* 나의 이야기 · 소재 */
-  else if (a === 'story-edit'){ ui.storyEdit = true; render(); }
-  else if (a === 'story-cancel'){ ui.storyEdit = false; render(); }
-  else if (a === 'story-save') run(async function(){
-    await rpc('set_account_story', { p_token:token, p_why:val('sty-why') || null, p_now:val('sty-now') || null, p_changed:val('sty-changed') || null, p_asked:val('sty-asked') || null });
-    ui.storyEdit = false; toast('나의 이야기를 저장했어요.');
-  });
-  else if (a === 'ideas-get'){ b.disabled = true; b.textContent = '소재를 만드는 중이에요…'; run(async function(){
-    await fn('ideas', { token:token }); toast('소재 5개가 도착했어요.');
-  }); }
-  else if (a === 'idea-set') run(async function(){ await rpc('set_idea_status', { p_token:token, p_id:Number(id), p_status:b.dataset.s }); });
 
   /* 캐릭터 */
   else if (a === 'av-s'){ ui.av = b.dataset.i + '-' + ui.av.split('-')[1]; render(); }
